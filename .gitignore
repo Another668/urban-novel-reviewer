@@ -1,0 +1,28 @@
+# === OS / Editor ===
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# === 项目数据（每本小说独立，不入仓库）===
+.review-db/
+
+# === Trae 本地开发规格（开发期产物，可选排除）===
+.trae/
+
+# === 日志 / 临时 ===
+*.log
+*.tmp
+*.bak
+
+# === 压缩包 / 发行产物 ===
+*.zip
+*.tar.gz
