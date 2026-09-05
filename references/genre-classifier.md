@@ -50,6 +50,7 @@
 | 科幻 | 星际、机甲、未来科技、外星文明 | 基因、飞船、赛博 | 未来设定 |
 | 历史 | 古代朝堂、权谋、架空王朝 | 科举、封侯、边军 | 古风非修仙 |
 | 恐怖灵异 | 鬼、灵异事件、副本规则、茅山 | 凶宅、诅咒、纸人 | 恐怖氛围 |
+| 公路求生·克苏鲁向（v3.6.0） | 公路/载具求生为核心舞台、线性公路节点（服务区/隧道/加油站）、SAN 值/理智值面板、成体系行车规则与路牌禁忌 | 燃油/食物/零件资源消耗与搜刮、载具改装升级、收音机异常频段、异常路牌/后视镜影子、夜间行驶 | 末世/诡异背景、移动推进叙事、循环路段、废弃车辆遗留物、认知污染氛围 |
 
 ### 女频题材
 
@@ -79,43 +80,44 @@
 
 | 识别类型 | 题材模板（必加载） | 专项模板（按命中叠加） | 专项审稿 agent |
 |---------|------------------|---------------------|---------------|
-| 都市日常 | `male/templates/genres/dushi.md` | `shared/templates/writing_craft/depth_balance.md`、`scene_craft.md` | `shared/agents/review/pace_critic.md`、`description_quality_agent.md`、`supporting_checker.md` |
-| 高武 | `male/templates/genres/urban_fantasy.md`（+`xuanhuan.md` 取境界体系） | `male/templates/goldfinger_design.md` | `goldfinger_checker.md`、`logic_checker.md`、`conflict_checker.md` |
-| 异能/系统 | `male/templates/genres/urban_fantasy.md` | `male/templates/goldfinger_design.md`、`antagonist_design.md` | `goldfinger_checker.md`、`info_auditor.md`、`foreshadow_hunter.md` |
-| 商战 | `male/templates/genres/dushi.md`、`entertainment.md`（娱乐圈商战时） | `male/templates/antagonist_design.md`、`climax_design.md` | `logic_checker.md`、`conflict_checker.md`、`character_judge.md` |
-| 娱乐圈 | `male/templates/genres/entertainment.md` | `male/templates/antagonist_face_slapping.md` | `pace_critic.md`、`plot_structure_agent.md` |
-| 玄幻 | `male/templates/genres/xuanhuan.md` | `male/templates/protagonist_design.md`、`goldfinger_design.md` | 全套 shared/agents/review/ |
+| 都市日常 | `male/templates/genres/dushi.md` | `shared/templates/writing_craft/depth_balance.md`、`shared/templates/writing_craft/scene_craft.md` | `shared/agents/review/pace_critic.md`、`shared/agents/review/description_quality_agent.md`、`shared/agents/review/supporting_checker.md` |
+| 高武 | `male/templates/genres/urban_fantasy.md`（+`male/templates/genres/xuanhuan.md` 取境界体系） | `male/templates/goldfinger_design.md` | `shared/agents/review/goldfinger_checker.md`、`shared/agents/review/logic_checker.md`、`shared/agents/review/conflict_checker.md` |
+| 异能/系统 | `male/templates/genres/urban_fantasy.md` | `male/templates/goldfinger_design.md`、`male/templates/antagonist_design.md` | `shared/agents/review/goldfinger_checker.md`、`shared/agents/review/info_auditor.md`、`shared/agents/review/foreshadow_hunter.md` |
+| 商战 | `male/templates/genres/dushi.md`、`male/templates/genres/entertainment.md`（娱乐圈商战时） | `male/templates/antagonist_design.md`、`male/templates/climax_design.md` | `shared/agents/review/logic_checker.md`、`shared/agents/review/conflict_checker.md`、`shared/agents/review/character_judge.md` |
+| 娱乐圈 | `male/templates/genres/entertainment.md` | `male/templates/antagonist_face_slapping.md` | `shared/agents/review/pace_critic.md`、`shared/agents/review/plot_structure_agent.md` |
+| 玄幻 | `male/templates/genres/xuanhuan.md` | `male/templates/protagonist_design.md`、`male/templates/goldfinger_design.md` | 全套 `shared/agents/review/` |
 | 仙侠 | `male/templates/genres/xianxia.md` | 同上 | 同上 |
-| 悬疑 | `male/templates/genres/mystery.md` | `climax_design.md` | `logic_checker.md`、`foreshadow_hunter.md`、`info_auditor.md` |
-| 穿越/重生 | `male/templates/genres/transmigration.md` | `goldfinger_design.md` | `logic_checker.md`、`pov_checker.md` |
-| 游戏 | `male/templates/genres/gaming.md` | — | `pace_critic.md`、`conflict_checker.md` |
-| 科幻 | `male/templates/genres/scifi.md` | `world_craft.md`（技法） | `logic_checker.md`、`info_auditor.md` |
-| 历史 | `male/templates/genres/historical.md` | `antagonist_design.md` | `logic_checker.md`、`character_judge.md` |
-| 恐怖灵异 | `male/templates/genres/horror.md`、`cosmic_horror.md`（克苏鲁向） | — | `pace_critic.md`、`pov_checker.md`；男频专项 `cosmic_horror_evaluator.md` |
-| DND奇幻 | `male/templates/genres/dnd.md` | — | 男频专项 `dnd_evaluator.md` |
+| 悬疑 | `male/templates/genres/mystery.md` | `male/templates/climax_design.md` | `shared/agents/review/logic_checker.md`、`shared/agents/review/foreshadow_hunter.md`、`shared/agents/review/info_auditor.md` |
+| 穿越/重生 | `male/templates/genres/transmigration.md` | `male/templates/goldfinger_design.md` | `shared/agents/review/logic_checker.md`、`shared/agents/review/pov_checker.md` |
+| 游戏 | `male/templates/genres/gaming.md` | — | `shared/agents/review/pace_critic.md`、`shared/agents/review/conflict_checker.md` |
+| 科幻 | `male/templates/genres/scifi.md` | `shared/templates/writing_craft/world_craft.md`（技法） | `shared/agents/review/logic_checker.md`、`shared/agents/review/info_auditor.md` |
+| 历史 | `male/templates/genres/historical.md` | `male/templates/antagonist_design.md` | `shared/agents/review/logic_checker.md`、`shared/agents/review/character_judge.md` |
+| 恐怖灵异 | `male/templates/genres/horror.md`、`male/templates/genres/cosmic_horror.md`（克苏鲁向） | — | `shared/agents/review/pace_critic.md`、`shared/agents/review/pov_checker.md`；男频专项 `male/agents/review/cosmic_horror_evaluator.md` |
+| 公路求生·克苏鲁向（v3.6.0） | `male/templates/genres/horror.md`、`male/templates/genres/cosmic_horror.md`（克苏鲁氛围） | rules-pack 专项规则包（按需加载，见 SKILL 铁律 13）：`system-novel-rules.md` #21 赛道模板（与 #4 末世求生、#16 诡异克苏鲁三重叠加）、`foreshadow-judgment-rules.md` 第六大类 F23-F27、`character-logic-rules.md` §1.6 公路节点节奏 + §2.6 SAN 分级行为校验 | `shared/agents/review/foreshadow_hunter.md`、`shared/agents/review/pace_critic.md`、`shared/agents/review/logic_checker.md`；男频专项 `male/agents/review/cosmic_horror_evaluator.md` |
+| DND奇幻 | `male/templates/genres/dnd.md` | — | 男频专项 `male/agents/review/dnd_evaluator.md` |
 
 ### 女频映射
 
 | 识别类型 | 题材模板（必加载） | 专项模板（按命中叠加） | 专项审稿 agent |
 |---------|------------------|---------------------|---------------|
-| 现代言情/恋爱 | `female/templates/genres/romance_modern.md` | `female/templates/romance_line.md`、`protagonist_female.md`、`dual_protagonist.md`（双主时） | `female/agents/review/romance_line_judge.md`、`male_roles_judge.md`；shared `emotional_craft.md` |
-| 古代言情 | `female/templates/genres/ancient_romance.md` | `romance_line.md` | `romance_line_judge.md`、`male_roles_judge.md` |
-| 耽美 BL | `female/templates/genres/boys_love.md` | `dual_protagonist.md` | `bl_relationship_judge.md`、`male_roles_judge.md` |
-| 百合 GL | `female/templates/genres/girls_love.md` | `dual_protagonist.md` | `gl_relationship_judge.md` |
-| 女尊/女强 | `female/templates/genres/female_dominance.md` | `protagonist_female.md`、`female_goldfinger_design.md` | `male_roles_judge.md`、`female_character_judge.md` |
-| 快穿/穿书 | `female/templates/genres/quick_pass.md` | `female_goldfinger_design.md`、`antagonist_face_slapping_female.md` | `foreshadow_hunter.md`、`logic_checker.md`、`romance_line_judge.md` |
-| 悬疑恋爱 | `female/templates/genres/mystery_romance.md` | `romance_line.md` | `romance_line_judge.md`、`logic_checker.md` |
-| 女频仙侠 | `female/templates/genres/female_xianxia.md` | `female_goldfinger_design.md` | `romance_line_judge.md`、`goldfinger_checker.md` |
+| 现代言情/恋爱 | `female/templates/genres/romance_modern.md` | `female/templates/romance_line.md`、`female/templates/protagonist_female.md`、`female/templates/dual_protagonist.md`（双主时） | `female/agents/review/romance_line_judge.md`、`female/agents/review/male_roles_judge.md`；`shared/templates/writing_craft/emotional_craft.md` |
+| 古代言情 | `female/templates/genres/ancient_romance.md` | `female/templates/romance_line.md` | `female/agents/review/romance_line_judge.md`、`female/agents/review/male_roles_judge.md` |
+| 耽美 BL | `female/templates/genres/boys_love.md` | `female/templates/dual_protagonist.md` | `female/agents/review/bl_relationship_judge.md`、`female/agents/review/male_roles_judge.md` |
+| 百合 GL | `female/templates/genres/girls_love.md` | `female/templates/dual_protagonist.md` | `female/agents/review/gl_relationship_judge.md` |
+| 女尊/女强 | `female/templates/genres/female_dominance.md` | `female/templates/protagonist_female.md`、`female/templates/female_goldfinger_design.md` | `female/agents/review/male_roles_judge.md`、`shared/agents/review/female_character_judge.md` |
+| 快穿/穿书 | `female/templates/genres/quick_pass.md` | `female/templates/female_goldfinger_design.md`、`female/templates/antagonist_face_slapping_female.md` | `shared/agents/review/foreshadow_hunter.md`、`shared/agents/review/logic_checker.md`、`female/agents/review/romance_line_judge.md` |
+| 悬疑恋爱 | `female/templates/genres/mystery_romance.md` | `female/templates/romance_line.md` | `female/agents/review/romance_line_judge.md`、`shared/agents/review/logic_checker.md` |
+| 女频仙侠 | `female/templates/genres/female_xianxia.md` | `female/templates/female_goldfinger_design.md` | `female/agents/review/romance_line_judge.md`、`shared/agents/review/goldfinger_checker.md` |
 
 ### 跨频道规则
 
-- 男主言情向：男频主流程 + `female/templates/romance_line.md` + `romance_line_judge.md`。
-- 女强升级流：女频主流程 + `male/templates/goldfinger_design.md` + `goldfinger_checker.md`。
+- 男主言情向：男频主流程 + `female/templates/romance_line.md` + `female/agents/review/romance_line_judge.md`。
+- 女强升级流：女频主流程 + `male/templates/goldfinger_design.md` + `shared/agents/review/goldfinger_checker.md`。
 - 任何题材都可叠加共享写作技法模板（`shared/templates/writing_craft/`）：对白问题→`dialogue_craft.md`；视角问题→`narrative_pov.md`；场景问题→`scene_craft.md`；情感问题→`emotional_craft.md`；世界观问题→`world_craft.md`；节奏/信息密度问题→`depth_balance.md`。
 
 ### 通用审稿 agent 库（13 维，所有题材可用）
 
-`shared/agents/review/INDEX.md` 为入口：character_judge（人物）、climax_checker（高潮）、conflict_checker（冲突）、description_quality_agent（描写）、female_character_judge（女性角色）、foreshadow_hunter（伏笔）、goldfinger_checker（金手指）、info_auditor（信息投放）、logic_checker（逻辑）、pace_critic（节奏）、plot_structure_agent（结构）、pov_checker（视角）、supporting_checker（配角）。
+`shared/agents/review/INDEX.md` 为入口：`shared/agents/review/character_judge.md`（人物）、`shared/agents/review/climax_checker.md`（高潮）、`shared/agents/review/conflict_checker.md`（冲突）、`shared/agents/review/description_quality_agent.md`（描写）、`shared/agents/review/female_character_judge.md`（女性角色）、`shared/agents/review/foreshadow_hunter.md`（伏笔）、`shared/agents/review/goldfinger_checker.md`（金手指）、`shared/agents/review/info_auditor.md`（信息投放）、`shared/agents/review/logic_checker.md`（逻辑）、`shared/agents/review/pace_critic.md`（节奏）、`shared/agents/review/plot_structure_agent.md`（结构）、`shared/agents/review/pov_checker.md`（视角）、`shared/agents/review/supporting_checker.md`（配角）。
 
 ---
 

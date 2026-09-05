@@ -1,51 +1,52 @@
 # 审稿专用向量化数据库（Review Vector DB）
 
-面向网文审稿的**文件型向量数据库**规范。零依赖、纯 Markdown/JSONL 存储、随项目走、跨设备可复制。审稿时由 AI 按本规范执行"建库 → 写入 → 相似度检索 → 比对判定"，效果等价于向量库：每条记录携带语义指纹（关键词向量 + 实体槽位），检索以语义相似度 + 实体精确匹配双通道进行。
+面向网文审稿的**文件型向量数据库**规范。零依赖、纯 Markdown/JSON 存储、随项目走、跨设备可复制。审稿时由 AI 按本规范执行"建库 → 检索 → 比对判定"，效果等价于向量库：每条记录携带语义指纹（关键词向量 + 实体槽位），检索以语义相似度 + 实体精确匹配双通道进行。
+
+> **v3.7.0 重大精简**：砍掉大部分持久化向量存储（人物/剧情/对白/数值等向量不再持久化），改为审稿时临时从正文 + setting.md 提取，审完即弃。仅保留：① meta.json（元数据）② setting.md（设定单文件）③ project_state.json（全专项状态）④ foreshadow/（伏笔索引+详情+归档）⑤ style_fingerprint.json（文风指纹）。核心目标：减少 60%~75% 的额外 token 消耗。
 
 ---
 
 ## 一、项目隔离机制（强制）
 
-### 1.1 库存放位置
+### 1.1 库存放位置（v3.7.0 精简版）
 
 每个网文项目一个**独立库实例**，存放在被审小说项目根目录下：
 
 ```text
 <小说项目根目录>/
-└── .review-db/                    # 审稿向量库（项目私有，不与他项目共享）
-    ├── project.json               # 项目档案：项目ID、书名、频道、题材、创建时间、库版本
-    ├── chapters.jsonl             # 章节向量记录（一章一条）
-    ├── facts.jsonl                # 已确认事实/设定向量（不可打破项）
-    ├── characters/
-    │   ├── _index.md              # 人物名册（名字↔档案文件）
-    │   ├── <人物slug>.md          # 人物档案：五维/铁则/语言指纹/情绪反应库/知识边界
-    │   └── ...
-    ├── plots.jsonl                # 剧情事件链向量（因果节点）
-    ├── dialogues.jsonl            # 对白指纹向量（台词风格/口语化样本）
-    ├── values.jsonl               # 数值状态流水（点数/等级/好感/货币）
-    ├── hooks.jsonl                # 伏笔账（埋设/回收状态机）
-    ├── social_ledger.jsonl        # 【v3.0】人情账本（谁欠谁人情/等级/偿还状态）
-    ├── relations.jsonl            # 【v3.0】关系追踪（二人关系状态/好感度/猜忌度）
-    ├── leverage.jsonl             # 【v3.0】把柄与筹码（持有者/对象/内容/是否曝光）
-    ├── foreshadow/                # 【v3.4.0】伏笔专项子目录（台账+5类特征向量，物理隔离）
-    │   ├── foreshadow_table.md    #   标准化伏笔台账（Markdown 表格，可直接存档）
-    │   └── vectors/               #   5 类伏笔特征向量子集（实体/人物/力量体系/剧情长线/隐性弱埋线）
-    └── audit-log.jsonl            # 历次审稿记录（审了哪章、发现什么、库如何更新）
+└── .review-db/                    # 审稿数据库（项目私有，不与他项目共享）
+    ├── meta.json                  # 项目元数据：书名、题材、当前章节、模块标记（极轻量）
+    ├── setting.md                 # 世界观 + 人物卡 + 力量体系 单文件，按段落分区
+    ├── project_state.json         # 全专项状态合并：
+    │   ├── system_state           #   系统文专项状态
+    │   ├── gender_state           #   性转专项状态
+    │   ├── road_state             #   公路求生专项状态
+    │   └── san_value              #   全局 SAN 值进度
+    ├── foreshadow/                # 伏笔专项子目录（索引+详情+归档，物理隔离）
+    │   ├── index.json             #   伏笔轻量索引：FID+状态+章节，日常仅读这个
+    │   ├── details/               #   单条伏笔详情，按需读写
+    │   └── archived.json          #   已回收伏笔归档，日常不碰
+    └── style_fingerprint.json     # 文风指纹（量化+定性，其余向量临时计算）
 ```
 
-> v3.0 新增社交三集合（social_ledger / relations / leverage），服务 D1 人情世故审查与 C2 人物利益校准；人物档案 `<人物slug>.md` 建议追加三块字段（模板见 `references/templates/shared/templates/social_persona_card.md`）：分层沟通规则（对上级/平级/下级/对手/恩人）、利益判断逻辑（底线/可交易项/卖人情场景/记仇事项）、情绪伪装模式表（真实情绪×外在表现×标志微动作）。v3.4.0 新增伏笔专项子目录（foreshadow/，台账 + 5 类特征向量），服务伏笔追踪专项（规范见 §六）。
+> **版本演进说明**：
+> - v3.0：社交三集合（social_ledger / relations / leverage），服务 D1 人情世故审查；
+> - v3.4.0：伏笔专项子目录（foreshadow/，台账 + 5 类特征向量）；
+> - v3.7.0 **精简重构**：砍掉冗余向量库持久化（chapters/facts/plots/dialogues/values/hooks/social_ledger/relations/leverage 等全部改为临时计算），人物档案合并入 setting.md，专项状态合并入 project_state.json，文件数量从 10+ 压缩到 4 个核心文件。
 
-### 1.2 首次审稿自动初始化
+### 1.2 首次审稿自动初始化（v3.7.0 轻量初始化）
 
 审稿第1步（记忆加载）时执行：
 
-1. 在被审章节所在项目根目录查找 `.review-db/project.json`。
-2. **不存在 → 判定为新项目，自动初始化**：
-   - 创建 `.review-db/` 全部目录与空文件；
-   - 生成 `project.json`：项目ID（项目目录名的 slug + 短哈希）、书名（从记忆文档/目录名推断，可向用户确认）、频道与题材（用 genre-classifier 首次识别结果）、`db_version: 2.0`、`created_at`；
-   - 扫描项目内记忆文档（按 memory-index.md 的识别规则），把其中的人物、事实、数值、伏笔**首次灌库**（来源标注 `source: memory-doc`）；
-   - 报告开头注明：`🆕 已为新项目《书名》初始化独立审稿数据库（.review-db/），项目间数据完全隔离。`
-3. **已存在 → 打开对应库**，校验 `project.json` 的项目ID与当前项目路径一致；不一致（如复制了别的项目的库）则停止并提示用户，严禁串库。
+1. 在被审章节所在项目根目录查找 `.review-db/meta.json`。
+2. **不存在 → 判定为新项目，执行最小化初始化**：
+   - 创建 `.review-db/` 标准目录结构（meta.json / setting.md / project_state.json / foreshadow/ / style_fingerprint.json）；
+   - 生成 `meta.json`：项目ID（项目目录名的 slug + 短哈希）、书名（从记忆文档/目录名推断，可向用户确认）、频道与题材（用 genre-classifier 首次识别结果）、`db_version: 3.0`、`current_chapter: 0`、`created_at`；
+   - 初始化 `setting.md`：从扫描到的记忆文档中提取世界观/人物/力量体系核心内容，按标题分区写入；
+   - 初始化 `project_state.json`：所有专项字段为空对象，随专项触发按需填充；
+   - 初始化 `foreshadow/index.json`：空数组，从记忆文档提取的伏笔按需追加；
+   - 报告开头注明：`🆕 已为《书名》初始化独立审稿数据库（.review-db/），项目间数据完全隔离。`
+3. **已存在 → 打开对应库**，校验 `meta.json` 的项目ID与当前项目路径一致；不一致则停止并提示用户，严禁串库。
 
 ### 1.3 隔离铁律
 
@@ -53,6 +54,39 @@
 - 库文件随小说项目一起存放/备份/移动；技能本身（skill 目录）不存任何项目数据——重装或更新技能不影响项目库。
 - 用户可手动删除 `.review-db/` 实现"忘记这个项目"；下次审稿自动重建。
 - `.review-db/` 建议加入项目备份但不加入发布包；严禁随技能 zip 分发任何项目库。
+
+---
+
+## 一点五、v3.7.0 精简策略：临时向量 + 持久化最小集
+
+### 为什么砍掉持久化向量库？
+
+v3.6 及之前，人物/剧情/对白/数值等向量全部持久化存储，每次审稿都要读写多个 JSONL 文件，token 消耗巨大。但实际上：
+- 大部分向量只用一次，后续审稿用不上；
+- 设定类信息已经在 setting.md 中有完整记录，重复存储是浪费；
+- 剧情/人物状态可以从正文回溯 + 当前章节提取，不需要全量持久化。
+
+### 持久化最小集（5 个核心文件）
+
+| 文件 | 作用 | 更新频率 |
+|------|------|---------|
+| `meta.json` | 项目元数据（书名/题材/当前章节） | 每章更新（仅改章节号） |
+| `setting.md` | 世界观 + 人物卡 + 力量体系 | 默认不更新，/sync-setting 时增量修改 |
+| `project_state.json` | 全专项状态（系统/性转/公路/SAN） | 默认不更新，/sync-setting 时更新触发字段 |
+| `foreshadow/index.json` | 伏笔轻量索引 | 默认轻量级更新（仅改状态/追加） |
+| `style_fingerprint.json` | 文风指纹 | 默认轻量级更新（EWMA 滑动） |
+
+### 临时计算向量（审完即弃）
+
+以下向量在审稿时**临时从正文 + setting.md 提取**，不写入磁盘：
+- 剧情事件链（plots）：从本章正文提取事件节点，用于因果链检查；
+- 人物行为向量：从本章正文提取关键行为/台词，用于 OOC 比对；
+- 对白指纹（dialogues）：从本章正文提取对白，用于口语化检测；
+- 数值流水（values）：从本章正文提取数值变动，用于穿帮检查；
+- 人情/关系/筹码（social_ledger/relations/leverage）：从本章正文提取社交事件，用于人情世故审查；
+- 事实冲突（facts）：从 setting.md + 本章正文提取已确认事实，用于一致性校验。
+
+**检索算法不变**（双通道相似度），只是数据源从"持久化向量库"变为"临时提取的本章 + 设定上下文"。
 
 ---
 
@@ -158,38 +192,74 @@
 
 ---
 
-## 五、审稿时的库操作时序
+## 五、审稿时的库操作时序（v3.7.0 轻量模式）
 
 ```text
-第1步 记忆加载 → 打开/初始化 .review-db → 加载 project.json + 人物档案 + facts + 未闭合 hooks
-第2步 题材识别 → 结果写入 project.json（题材字段滚动更新）
-第4步 执行审查 → 每个疑点：生成查询指纹 → 检索对应集合 → 双通道命中比对 → 出判定
-第5步 审后回写 → 追加 chapters/events/dialogues/values 记录；
-                  hooks 状态推进；新人物建档；成长候选/新事实请用户确认后写入；
-                  audit-log.jsonl 追加本次审稿摘要
+第1步 记忆加载 → 打开/初始化 .review-db → 读取 meta.json（<100token）
+                                   → 按需加载 setting.md 涉及段落 + 触发专项的 project_state 字段
+                                   → 读取 foreshadow/index.json（伏笔索引）
+                                   → 读取 style_fingerprint.json（文风指纹）
+第2步 题材识别 → 结果记录在上下文，不立即写入 meta.json（章末统一更新）
+第4步 执行审查 → 每个疑点：从正文+setting.md临时提取查询指纹 → 双通道比对 → 出判定
+第5步 审后回写 → 【默认轻量级】：
+                      1. 更新 meta.json 当前章节号
+                      2. 增量更新 foreshadow/index.json（状态推进/新增条目）
+                      3. EWMA 更新 style_fingerprint.json
+                      不碰：setting.md / project_state.json / 章纲 / 卷纲
+                  【/sync-setting 标准级】：
+                      + 增量修改 setting.md 对应段落
+                      + 更新 project_state.json 对应专项字段
+                  【/sync-outline 全量级】：
+                      + 同步更新章纲
+                      + 联动修正卷纲
+                      + 全量校验一致性
 ```
 
-**回写纪律**：事实类（facts/人物铁则/数值）只追加与确认后修改，不覆盖历史；冲突保留两条记录并标注 `superseded_by`，可追溯。库文件全部为明文，用户可随时人工查阅纠错。
+**回写纪律（v3.7.0 增量写入铁律）**：
+1. 所有更新仅修改命中的对应段落/条目，**禁止全量重写文件**；
+2. setting.md 按标题定位，仅替换涉及的人物/世界观段落；
+3. 伏笔索引仅追加/修改对应 FID 条目，不重写全表；
+4. project_state.json 仅更新触发的专项字段，其余字段保留；
+5. 已归档数据默认不触碰，仅手动指令触发归档操作；
+6. 库文件全部为明文，用户可随时人工查阅纠错。
 
 ---
 
-## 六、伏笔专项台账与特征向量（v3.4.0 新增）
+## 六、伏笔专项存储与同步规范（v3.4.0 新增 / v3.7.0 精简）
 
-伏笔追踪专项（判定标准 [rules-pack/foreshadow-judgment-rules.md](rules-pack/foreshadow-judgment-rules.md)、冲突校验 [rules-pack/foreshadow-conflict-rules.md](rules-pack/foreshadow-conflict-rules.md)、分题材模板 [rules-pack/foreshadow-topic-templates.md](rules-pack/foreshadow-topic-templates.md)）在库内的存储与同步规范：
+伏笔追踪专项（判定标准 [rules-pack/foreshadow-judgment-rules.md](rules-pack/foreshadow-judgment-rules.md)、冲突校验 [rules-pack/foreshadow-conflict-rules.md](rules-pack/foreshadow-conflict-rules.md)、分题材模板 [rules-pack/foreshadow-topic-templates.md](rules-pack/foreshadow-topic-templates.md)）在库内的存储与同步规范。
 
-### 6.1 foreshadow/ 子目录结构
+### 6.1 foreshadow/ 子目录结构（v3.7.0 精简版）
 
-- `foreshadow/foreshadow_table.md` — **标准化伏笔台账**（Markdown 表格，可直接存档）：每行一条伏笔，字段为 编号 / 大类·小类（五大类 22 小类，F1-F22）/ 内容摘要 / 埋设章 / 强化章 / 计划回收章 / 状态（planted/reinforced/half-closed/closed/overdue/broken）/ 优先级（高/中/低）/ 原文锚点（强制）/ 预警冲突记录；
-- `foreshadow/vectors/` — **伏笔特征向量子集**（5 类，与原 plots/facts 检索双通道同构）：实体类伏笔特征向量（F1-F6）/ 人物类（F7-F11）/ 力量体系类（F12-F15）/ 剧情长线类（F16-F19）/ 隐性弱埋线（F20-F22）；检索顺序：先跑通用特征 → 再叠加伏笔专属特征 → 统一排序。
+```
+foreshadow/
+├── index.json     # 伏笔轻量索引：FID+状态+章节，日常仅读这个（快速加载）
+├── details/       # 单条伏笔详情（每条一个 JSON 文件），按需读取
+│   ├── F001.json
+│   ├── F002.json
+│   └── ...
+└── archived.json  # 已回收伏笔归档，日常不加载
+```
 
-### 6.2 与 hooks.jsonl 同源同步（强制）
+- **`index.json`** — 轻量索引数组，每条含：`{fid, category, status, chapter_buried, chapter_due, priority, summary}`。日常审稿仅加载此文件，快速获取全局伏笔状态，token 消耗极低。
+- **`details/`** — 单条伏笔详情，每条一个 JSON 文件，包含完整信息：大类·小类（六大类 27 小类，F1-F27，含公路场景专属 F23-F27）/ 内容摘要 / 埋设章 / 强化章 / 计划回收章 / 状态 / 优先级 / 原文锚点 / 预警冲突记录等。仅在需要核对具体伏笔时才读取对应文件，禁止批量加载。
+- **`archived.json`** — 已完全回收（closed）的伏笔归档数组，日常不加载。由 `/force-archive` 指令手动触发归档，减少 index.json 体积。
 
-伏笔专项状态机与既有 hooks 轻量状态机的映射：`planted / reinforced → open`、`half-closed → half`、`closed → closed`、`overdue → open + 超期标记`、`broken → closed + 矛盾标记`。
+> **v3.7.0 精简说明**：原 `foreshadow_table.md`（Markdown 台账）和 `vectors/`（伏笔特征向量）不再持久化。台账功能由 index.json + details/ 替代（索引+详情分离，更省 token）；特征向量改为审稿时临时从正文提取，审完即弃。
 
-**回写纪律**：每章审后伏笔状态推进**一次回写两处**（hooks.jsonl + foreshadow_table.md），严禁只写一处造成账实分离；台账为完整账（分类 / 优先级 / 回收计划），hooks 为轻量账（服务 D2 连载一致性速查），检索时互为引用、**不出两套结论**。
+### 6.2 状态机与回写纪律
+
+伏笔状态机（六大状态）：`planted（已埋）` / `reinforced（强化）` / `half-closed（半回收）` / `closed（已回收）` / `overdue（超期）` / `broken（冲突断裂）`。
+
+**回写纪律（v3.7.0 增量铁律）**：
+1. 每章审后伏笔状态推进，**仅修改 index.json 中对应 FID 的状态字段**，不重写整个索引；
+2. 新增伏笔时，**仅追加一条新条目到 index.json**，同时在 details/ 中创建对应详情文件；
+3. 归档时，**仅将对应条目从 index.json 移至 archived.json**，不改动其他条目；
+4. 详情文件（details/Fxxx.json）仅在用户查看具体伏笔或 /sync-setting 时才更新，默认轻量模式不触碰。
 
 ### 6.3 跨章节继承与隔离
 
-- 每章审稿第1步自动读取 `foreshadow_table.md` 全局台账作为增量校验底座（不存在则本章审后首次建档）；
-- 台账随项目 `.review-db/` 存放 / 备份 / 移动，不随技能分发，与 1.3 隔离铁律一致；
-- 伏笔专项数据独立于原向量库集合（plots/facts/characters/dialogues/hooks/values），物理隔离不污染原库；`.review-db/foreshadow/` 与 `.review-db/gender-transition/` 同为专项独立子目录。
+- 每章审稿第1步自动读取 `foreshadow/index.json` 轻量索引作为增量校验底座（不存在则本章审后首次建档）；
+- 索引随项目 `.review-db/` 存放 / 备份 / 移动，不随技能分发，与 1.3 隔离铁律一致；
+- 伏笔专项数据独立于 setting.md 和 project_state.json，物理隔离不污染；
+- 需要查看具体伏笔详情时，才按需读取 `details/Fxxx.json`，不批量加载全量详情。

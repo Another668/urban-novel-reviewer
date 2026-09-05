@@ -2,33 +2,40 @@
 
 提取、记忆、监控作者文风的专用向量库。目标：**让续写/改写保持"同一个人写的"质感，同时允许文风随剧情自然生长——防漂移，不防进化。**
 
-与审稿库（review-vector-db）的关系：同属一个项目的 `.review-db/` 实例，文风数据存于独立子目录，互不干扰。
+与审稿库（review-vector-db）的关系：同属一个项目的 `.review-db/` 实例，文风数据以单文件形式存储，互不干扰。
+
+> **v3.7.0 精简**：原 style/ 子目录下的 5 个文件（style-profile / style-samples / sentence-patterns / lexicon / style-evolution）合并精简为单个 `style_fingerprint.json`。样本、句式骨架、用词库改为审稿时临时从正文提取，审完即弃，不持久化存储。
 
 ---
 
-## 一、存储结构
+## 一、存储结构（v3.7.0 精简版）
 
 ```text
 <小说项目根目录>/.review-db/
-└── style/
-    ├── style-profile.json        # 文风主档案：量化指纹 + 容差带 + 演变史指针
-    ├── style-samples.jsonl       # 文风样本向量（每章1-3条代表性段落）
-    ├── sentence-patterns.jsonl   # 句式指纹（高频句型骨架，去内容后）
-    ├── lexicon.json              # 作者用词库：偏好词/禁用感词/口头禅/独特比喻
-    └── style-evolution.jsonl     # 风格演变日志（每次指纹更新的增量与原因）
+└── style_fingerprint.json       # 文风指纹单文件：量化指纹 + 定性描述 + 容差带
 ```
 
-项目隔离、初始化时机、隔离铁律与审稿库完全一致（见 review-vector-db.md 第一节）：首次审稿随 `.review-db/` 一起初始化；无样本时文风维度跳过并声明。
+项目隔离、初始化时机、隔离铁律与审稿库完全一致（见 review-vector-db.md 第一节）：首次审稿随 `.review-db/` 一起初始化；样本不足（<3章）时文风维度只描述、不判罚。
+
+### 精简说明
+
+| v3.6 文件 | v3.7 处理 | 原因 |
+|----------|----------|------|
+| style-profile.json | 合并入 style_fingerprint.json | 主档案是核心，必须持久化 |
+| style-samples.jsonl | 改为临时提取 | 样本每章都有，重新提取比读历史文件更省 token |
+| sentence-patterns.jsonl | 改为临时提取 | 句式骨架可从本章正文直接提取，无需历史累积 |
+| lexicon.json | 合并入 style_fingerprint.json 的 qualitative 字段 | 偏好词/禁忌词量少，放入定性描述即可 |
+| style-evolution.jsonl | 合并入 style_fingerprint.json 的 evolution 数组 | 演变日志量小，直接存主文件，不用单独读 |
 
 ---
 
-## 二、文风指纹（style-profile.json）
+## 二、文风指纹（style_fingerprint.json）
 
 从至少 3 章（建议 5 章以上）正文提取，样本不足时标注 `confidence: low`，只监控不判罚。
 
 ```json
 {
-  "db_version": 2.0,
+  "db_version": "3.0",
   "book": "书名",
   "confidence": "high",
   "sampled_chapters": [1, 2, 3, 4, 5],
@@ -43,7 +50,7 @@
     "sensory_ratio": 0.15,             // 感官描写句占比（视/听/嗅/触/味）
     "inner_os_ratio": 0.22,            // 内心独白/吐槽占比
     "punct_flavor": { "破折号": 0.6, "省略号": 0.3, "感叹号": 0.4, "问号连击": 0.1 },
-    "paragraph_rhythm": [3, 1, 5, 1, 8, 2, 1]  // 段落句数节奏模式（滑动窗口典型序列）
+    "paragraph_rhythm": [3, 1, 5, 1, 8, 2, 1]
   },
   "qualitative": {
     "narrative_voice": "调侃式第三人称贴主角，内心吐槽毒舌、叙述嘴上克制",
@@ -51,7 +58,10 @@
     "description_habit": "重动作轻环境，环境描写≤两句必切回人物",
     "emotion_handling": "情绪不直写，用动作/生理反应外化（耳尖、指尖、喉结）",
     "transition_habit": "场景切换用空行+硬切，不用'与此同时'",
-    "taboo_patterns": ["大段排比抒情", "'不是A而是B'连用", "结尾升华总结句"]
+    "taboo_patterns": ["大段排比抒情", "'不是A而是B'连用", "结尾升华总结句"],
+    "pet_words": ["得，", "行吧", "好家伙", "——"],
+    "signature_metaphors": ["像被踩了尾巴的猫", "CPU烧了"],
+    "register": "现代口语+网络语感，禁止书面播音腔"
   },
   "tolerance_band": {                  // 容差带：超出才告警，避免风格硬化
     "avg_sentence_len": 0.25,          // ±25%
@@ -60,10 +70,14 @@
     "idiom_density": 0.50,
     "inner_os_ratio": 0.35
   },
-  "anchors": ["style-samples#s-001", "style-samples#s-005"],  // 标杆样本（最能代表文风的段落）
+  "evolution": [                       // 风格演变日志（合并原 style-evolution.jsonl）
+    { "chapter": 12, "change": "inner_os_ratio 0.22→0.31", "reason": "商战线开启", "status": "confirmed" }
+  ],
   "updated_at": "2026-08-31"
 }
 ```
+
+> **v3.7.0 结构说明**：原 lexicon.json 的用词库合并入 `qualitative` 字段（pet_words / signature_metaphors / register）；原 style-evolution.jsonl 的演变日志合并入 `evolution` 数组；标杆样本改为从正文中动态选取，不持久化存储 ID 引用。
 
 ---
 
@@ -136,24 +150,26 @@
 
 ### 5.1 指数滑动更新（EWMA）
 
-每次审后回写，量化指纹按权重融合而非覆盖：
+每次审后回写（轻量级默认执行），量化指纹按权重融合而非覆盖：
 
 ```text
 新档案值 = 0.75 × 旧档案值 + 0.25 × 本章值（高置信阶段）
 建档期（前5章）：0.4 × 旧 + 0.6 × 新（快速成型）
 ```
 
-单章异常值（偏离 > 50%）不纳入融合，进 `style-evolution.jsonl` 挂起，连续 3 章同向漂移才确认为"演变"。
+单章异常值（偏离 > 50%）不纳入融合，追加到 `evolution` 数组并标记 `status: "pending"` 挂起，连续 3 章同向漂移才确认为"演变"。
+
+> **v3.7.0 更新分级说明**：EWMA 滑动更新属于**轻量级**默认操作，每章审稿后自动执行，token 消耗极低（仅修改 quant 字段数值）。
 
 ### 5.2 演变确认流程
 
-`style-evolution.jsonl` 记录每次指纹变动：
+`style_fingerprint.json` 的 `evolution` 数组记录每次指纹变动：
 
 ```json
 { "chapter": 12, "change": "inner_os_ratio 0.22→0.31", "reason_candidate": "商战线开启，主角心理博弈增多", "status": "pending|confirmed|rejected", "confirmed_at": 15 }
 ```
 
-- **pending（挂起）**：首次检测到持续漂移。
+- **pending（挂起）**：首次检测到持续漂移，自动追加到 evolution 数组。
 - **confirmed（确认）**：连续 3 章同向且有剧情支撑（副本/感情线/商战线等新阶段）→ 更新档案值与容差带，`qualitative` 补注演变方向。
 - **rejected（驳回）**：漂移无剧情支撑或伴随 AI 腔 → 不更新档案，审稿时按旧指纹判罚。
 

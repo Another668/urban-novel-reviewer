@@ -1,4 +1,4 @@
-﻿# run_tests.ps1 - urban-novel-reviewer v3.3.1 测试套件（单元 + 集成）
+﻿# run_tests.ps1 - urban-novel-reviewer v3.6.0 测试套件（单元 + 集成）
 # 零依赖 PowerShell，Windows 原生运行：
 #   powershell -ExecutionPolicy Bypass -File tests\run_tests.ps1
 # 覆盖：T1 结构完整性 / T2 九技能映射 / T3 六大审查接线 / T4 脚本集成 /
@@ -7,7 +7,9 @@
 #       T12 v3.2大纲审稿分支+系统文专项接线 / T13 v3.2.1系统文扩容接线 /
 #       T14 v3.3.0性别转变角色专项接线 /
 #       T15 v3.3.1性转兼容方案接线（版本统一/三层路由/六项复用/双触发+降级+开关/统一附录输出/跨模块联动/原生兼容/灰度兜底/全链路版本一致性）/
-#       T16 v3.4.0伏笔追踪专项接线（版本统一/判定-冲突-分题材三规则包/触发与深度三档/台账持久化/附录输出/INDEX联动/灰度兜底/README登记）
+#       T16 v3.4.0伏笔追踪专项接线（版本统一/判定-冲突-分题材三规则包/触发与深度三档/台账持久化/附录输出/INDEX联动/灰度兜底/README登记）/
+#       T18 v3.5.0数据路径架构重构接线（版本统一/前置数据路径约定四条+标准目录树/按需加载三步+映射表/手动指令集五条/统一附录输出三板块/全局资源索引+配套使用/INDEX+README同步/总数一致性）/
+#       T19 v3.6.0公路求生·克苏鲁向题材适配接线（版本统一/#21赛道模板/F23-F27第六大类伏笔/12类分题材模板/§1.6节点节奏+§2.6 SAN分级/SKILL全链路+意图词典/INDEX联动/genre-classifier+vector-db交叉引用/零侵入门控+灰度回退/README同步+总数一致性）
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $Ref = Join-Path $Root "references"
@@ -197,7 +199,7 @@ Check "T12d" "rules-pack/INDEX 登记两个新规则包" ($idxNew -like "*outlin
 
 # ── T13 v3.2.1 系统文专项扩容接线（20 类赛道 + 12 套性格人设 + 双校验）──
 $v321skill = [ordered]@{
-    "版本3.3.1"    = ($skill -like "*3.3.1*")
+    "版本3.5.0"    = ($skill -like "*3.5.0*")
     "路由20类"     = ($skill -like "*20 类*" -or $skill -like "*20类*")
     "性格人设库"   = ($skill -like "*性格人设*")
     "双校验"       = ($skill -like "*双校验*")
@@ -403,9 +405,9 @@ $ft16  = Read-Text "references\rules-pack\foreshadow-topic-templates.md"
 $vdb16 = Read-Text "references\review-vector-db.md"
 $sty16 = Read-Text "references\style-memory-db.md"
 
-# T16a v3.4.0 版本号全链路统一（SKILL frontmatter / README 徽章 / INDEX / 三伏笔规则包）
-$t16a = ($skill -like "*version: 3.4.0*" -and $readme -like "*version-3.4.0*" -and $readme -like "*v3.4.0*" -and $idx15 -like "*v3.4.0*" -and $fj16 -like "*v3.4.0*" -and $fc16 -like "*v3.4.0*" -and $ft16 -like "*v3.4.0*")
-Check "T16a" "v3.4.0 版本号全链路统一（SKILL frontmatter / README 徽章 / INDEX / 判定-冲突-模板三规则包 七处声明）" $t16a $(if ($t16a) { "7/7 声明到位" } else { "SKILL=$($skill -like '*version: 3.4.0*') README_badge=$($readme -like '*version-3.4.0*') README_v=$($readme -like '*v3.4.0*') INDEX=$($idx15 -like '*v3.4.0*') FJ=$($fj16 -like '*v3.4.0*') FC=$($fc16 -like '*v3.4.0*') FT=$($ft16 -like '*v3.4.0*')" })
+# T16a v3.4.0 版本号历史保留（SKILL description / README 历史更新章节 / INDEX 概述 / 三伏笔规则包 保留 v3.4.0 声明）
+$t16a = ($skill -like "*v3.4.0*伏笔追踪*" -and $readme -like "*历史更新（v3.4.0*" -and $readme -like "*v3.4.0** | **2026-09-03** | **新增伏笔追踪*" -and $idx15 -like "*v3.4.0*伏笔追踪*" -and $fj16 -like "*v3.4.0*" -and $fc16 -like "*v3.4.0*" -and $ft16 -like "*v3.4.0*")
+Check "T16a" "v3.4.0 版本历史保留（SKILL description / README 历史更新章节+版本记录 / INDEX 概述 / 判定-冲突-模板三规则包 七处声明v3.4.0）" $t16a $(if ($t16a) { "7/7 历史声明保留" } else { "SKILL_desc=$($skill -like '*v3.4.0*伏笔追踪*') README_history=$($readme -like '*历史更新（v3.4.0*') README_record=$($readme -like '*v3.4.0** | **2026-09-03** | **新增伏笔追踪*') INDEX=$($idx15 -like '*v3.4.0*伏笔追踪*') FJ=$($fj16 -like '*v3.4.0*') FC=$($fc16 -like '*v3.4.0*') FT=$($ft16 -like '*v3.4.0*')" })
 
 # T16b 判定标准：五大类 22 小类 + 生命周期状态机 + 台账字段 + 埋设强度伪装度 + 深度三档
 $fjKps = @("五大类", "22 小类", "实体类", "人物类", "力量体系类", "剧情长线类", "隐性弱埋线", "F1", "F22",
@@ -471,10 +473,145 @@ $skillSafe340 = @("建议级", "模块级回退清单", "物理隔离", "foresha
 $missSkillSafe = @($skillSafe340 | Where-Object { $skill -notlike "*$_*" })
 Check "T16h" "INDEX 伏笔三包登记+联动条款（同源/冲突处理/自动叠加/precise/建议级/只提建议/模块级回退/不重复）与 SKILL 灰度兜底（建议级/回退清单/物理隔离/可选依赖/任意叠加）齐备" (($missIdxF.Count -eq 0) -and ($missSkillSafe.Count -eq 0)) $(if ($missIdxF -or $missSkillSafe) { "INDEX 缺失: $($missIdxF -join ',')；SKILL 缺失: $($missSkillSafe -join ',')" } else { "INDEX $(@($idxFKps).Count)/$(@($idxFKps).Count) + SKILL $($skillSafe340.Count)/$($skillSafe340.Count) 要点" })
 
-# T16i README 登记 v3.4.0 伏笔追踪专项（徽章/功能特性/触发词/模式/调度/目录/版本记录/测试总数）
-$readmeFKps = @("version-3.4.0", "v3.4.0", "伏笔追踪", "伏笔追踪专项", "foreshadow_table", "五大类 22 小类", "遗忘预警", "深度三档", "foreshadow_base", "57 项单元+集成测试", "T16 系列")
+# T16i README v3.4.0 伏笔追踪专项历史保留（历史更新章节/版本记录/功能特性/触发词/模式/目录/.review-db）
+$readmeFKps = @("历史更新（v3.4.0", "v3.4.0", "伏笔追踪", "伏笔追踪专项", "foreshadow_table", "五大类 22 小类", "遗忘预警", "深度三档", "foreshadow_base", "65 项单元+集成测试", "T16 系列")
 $missRdF = @($readmeFKps | Where-Object { $readme -notlike "*$_*" })
-Check "T16i" "README v3.4.0 伏笔追踪专项登记（徽章/最新更新/功能特性/触发词/审稿模式/调度映射/目录结构/.review-db/版本记录/测试57项+T16范围）齐全" ($missRdF.Count -eq 0) $(if ($missRdF) { "缺失: $($missRdF -join ',')" } else { "$(@($readmeFKps).Count)/$(@($readmeFKps).Count) 要点" })
+Check "T16i" "README v3.4.0 伏笔追踪专项历史保留（历史更新章节/版本记录/功能特性/触发词/审稿模式/调度映射/目录结构/.review-db/测试65项+T16范围）齐全" ($missRdF.Count -eq 0) $(if ($missRdF) { "缺失: $($missRdF -join ',')" } else { "$(@($readmeFKps).Count)/$(@($readmeFKps).Count) 要点" })
+
+# ── T18 v3.5.0 数据路径架构重构接线（v3.6.0 起 frontmatter/badge/测试头顺延为 3.6.0，v3.5.0 功能与历史声明保留）──
+# T18a 版本链路统一（当前版本 SKILL frontmatter 3.6.0 + run_tests 头 3.6.0 + README badge 3.6.0；v3.5.0 数据路径功能在 description/版本记录/INDEX 概述中保留）
+$t18a = ($skill -like "*version: 3.6.0*" -and $skill -like "*v3.5.0*数据路径*" -and 
+         $readme -like "*version-3.6.0*" -and $readme -like "*v3.5.0*数据路径*" -and $readme -like "*v3.5.0*" -and
+         $idx15 -like "*v3.5.0*数据路径*" -and
+         (Get-Content $PSCommandPath -Raw -Encoding UTF8) -like "*v3.6.0 测试套件*")
+Check "T18a" "版本链路统一（SKILL frontmatter=3.6.0 / README badge=3.6.0 / run_tests 头=3.6.0；v3.5.0 数据路径功能与历史声明五处保留）" $t18a $(if ($t18a) { "当前版本 3.6.0 + v3.5.0 历史保留，链路一致" } else { "SKILL_ver=$($skill -like '*version: 3.6.0*') SKILL_v35hist=$($skill -like '*v3.5.0*数据路径*') README_badge=$($readme -like '*version-3.6.0*') README_v35hist=$($readme -like '*v3.5.0*数据路径*') INDEX=$($idx15 -like '*v3.5.0*数据路径*') Tests=$((Get-Content $PSCommandPath -Raw -Encoding UTF8) -like '*v3.6.0 测试套件*')" })
+
+# T18b SKILL 前置约定章节存在且包含四条约定关键句 + 标准目录树七项
+$pathKeys = @("前置强制执行：数据路径约定", "全局资源目录", "references/", "项目专属数据库", "`$WORKSPACE_FOLDER/.review-db/", "路径基准", "`$WORKSPACE_FOLDER", "自动初始化", "meta.json", "setting.md", "foreshadow/", "vectors/", "gender-transition/", "system/")
+$missPath = @($pathKeys | Where-Object { $skill -notlike "*$_*" })
+Check "T18b" "SKILL 前置约定章节存在且包含四条约定（全局/项目/路径基准/自动初始化）+ 标准目录树七项（meta.json/setting.md/foreshadow/vectors/gender-transition/system）" ($missPath.Count -eq 0) $(if ($missPath) { "缺失: $($missPath -join ',')" } else { "$(@($pathKeys).Count)/$(@($pathKeys).Count) 要点" })
+
+# T18c SKILL 按需加载三步流程 Step 0/1/2 + 映射表四行（基础审稿/系统文/性转/伏笔）
+$loadKeys = @("数据加载执行流程", "严格控 token", "Step 0", "启动预检", "meta.json", "<100 token", "Step 1", "模块级按需加载", "Step 2", "深度详情按需读取", "基础审稿", "setting.md", "系统文专项", "system/state.json", "性别转变专项", "gender-transition/state.json", "伏笔追踪专项", "foreshadow/index.json", "增量写入", "拆分存储", "自动归档", "状态同步")
+$missLoad = @($loadKeys | Where-Object { $skill -notlike "*$_*" })
+Check "T18c" "SKILL 按需加载三步流程（Step 0启动预检<100token / Step 1模块级按需 / Step 2深度详情单条）+ 映射表四行 + 数据写入四规则齐全" ($missLoad.Count -eq 0) $(if ($missLoad) { "缺失: $($missLoad -join ',')" } else { "$(@($loadKeys).Count)/$(@($loadKeys).Count) 要点" })
+
+# T18d SKILL 手动指令集章节 + 五条指令表格 + 附录词典五条追加
+$cmdKeys = @("七、手动控制指令集", "/init-review", "/full-load", "/light-mode", "/archive-closed", "/export-foreshadow", "初始化完整审稿数据库", "全量加载所有模块数据", "精简模式", "手动归档", "导出全书完整伏笔追踪表")
+$missCmds = @($cmdKeys | Where-Object { $skill -notlike "*$_*" })
+Check "T18d" "SKILL 手动指令集章节（七、）+ 五条指令表格（/init-review /full-load /light-mode /archive-closed /export-foreshadow）+ 附录词典追加" ($missCmds.Count -eq 0) $(if ($missCmds) { "缺失: $($missCmds -join ',')" } else { "$(@($cmdKeys).Count)/$(@($cmdKeys).Count) 要点" })
+
+# T18e SKILL 统一输出格式【专项审查附录】三板块 + 伏笔四子段 + 降级三条
+$outputKeys = @("【专项审查附录】", "系统文专项结论", "性别转变专项结论", "伏笔追踪专项结论", "本章新增预埋", "全局未回收", "逻辑冲突", "原生系统精度对比报告", "快速审稿", "无项目数据", "未命中专项")
+$missOut = @($outputKeys | Where-Object { $skill -notlike "*$_*" })
+Check "T18e" "SKILL 统一输出格式（【专项审查附录】三板块 + 伏笔四子段：本章新增/全局未回收/逻辑冲突/原生对比 + 降级三条：快速/无数据/未命中）" ($missOut.Count -eq 0) $(if ($missOut) { "缺失: $($missOut -join ',')" } else { "$(@($outputKeys).Count)/$(@($outputKeys).Count) 要点" })
+
+# T18f SKILL 全局资源索引章节（九、）+ references/ 三子目录 + 配套使用说明四步
+$resKeys = @("九、全局资源索引", "references/", "rules-pack/", "templates/", "rubric/", "配套使用说明", "Trae 全局技能目录", ".trae/skills", "自动在项目根目录创建", "跨会话打开", "多本书同时审稿")
+$missRes = @($resKeys | Where-Object { $skill -notlike "*$_*" })
+Check "T18f" "SKILL 全局资源索引章节（九、）+ references/ 三子目录（rules-pack/templates/rubric）+ 配套使用说明四步（全局生效/自动创建/跨会话/多本书隔离）" ($missRes.Count -eq 0) $(if ($missRes) { "缺失: $($missRes -join ',')" } else { "$(@($resKeys).Count)/$(@($resKeys).Count) 要点" })
+
+# T18g INDEX / README 同步（v3.6.0 起 README 最新更新章节顺延为 v3.6.0，v3.5.0 数据路径内容在版本记录与 INDEX 中保留）
+$syncOk = ($idx15 -like "*v3.5.0*数据路径*" -and $idx15 -like "*按需加载*" -and
+           $readme -like "*## 📌 最新更新（v3.6.0*" -and
+           $readme -like "*| **v3.5.0** | **2026-09-03** |*" -and
+           $readme -like "*数据路径*")
+Check "T18g" "INDEX v3.5.0 数据路径重构声明保留 + README 最新更新章节顺延 v3.6.0 + 版本记录表 v3.5.0 条目保留" $syncOk $(if ($syncOk) { "INDEX/README 同步到位（最新更新=v3.6.0，v3.5.0 历史保留）" } else { "INDEX_v350=$($idx15 -like '*v3.5.0*数据路径*') INDEX_load=$($idx15 -like '*按需加载*') README_update=$($readme -like '*## 📌 最新更新（v3.6.0*') README_v35record=$($readme -like '*| **v3.5.0** | **2026-09-03** |*') README_datapath=$($readme -like '*数据路径*')" })
+
+# T18h README 测试套件总数声明（v3.6.0 起 75 项）与实际 Check 数量一致
+$actualCheckCount = (Get-Content $PSCommandPath -Raw -Encoding UTF8 | Select-String -Pattern 'Check "T\d+' -AllMatches).Matches.Count
+$readmeCountOk = ($readme -like "*75 项单元+集成测试*" -and $actualCheckCount -eq 75)
+Check "T18h" "README 测试套件总数声明（75 项）与实际 Check 数量一致" $readmeCountOk $(if ($readmeCountOk) { "README 声明 75 项，实际 Check 调用 $actualCheckCount 次，一致" } else { "README 声明 vs 实际 Check 数量不匹配（README 期望 75，实际 $actualCheckCount）" })
+
+# ── T19 v3.6.0 公路求生·克苏鲁向题材适配接线 ──
+$cl19  = Read-Text "references\rules-pack\character-logic-rules.md"
+$gc19  = Read-Text "references\genre-classifier.md"
+
+# T19a 版本号全链路统一（SKILL frontmatter=3.6.0 + description 公路适配 / README badge=3.6.0 + 最新更新 v3.6.0 + 版本记录 / INDEX 概述 / system-novel 头 / run_tests 头）
+$t19a = ($skill -like "*version: 3.6.0*" -and $skill -like "*v3.6.0*公路求生*" -and
+         $readme -like "*version-3.6.0*" -and $readme -like "*## 📌 最新更新（v3.6.0*" -and $readme -like "*| **v3.6.0** | **2026-09-04** |*" -and
+         $idx15 -like "*v3.6.0*公路求生*" -and $sy -like "*v3.6.0*" -and
+         (Get-Content $PSCommandPath -Raw -Encoding UTF8) -like "*v3.6.0 测试套件*")
+Check "T19a" "v3.6.0 版本号全链路统一（SKILL frontmatter+description / README badge+最新更新+版本记录 / INDEX / system-novel 头 / run_tests 头 七处声明）" $t19a $(if ($t19a) { "7/7 声明到位" } else { "SKILL_ver=$($skill -like '*version: 3.6.0*') SKILL_desc=$($skill -like '*v3.6.0*公路求生*') README_badge=$($readme -like '*version-3.6.0*') README_update=$($readme -like '*## 📌 最新更新（v3.6.0*') README_record=$($readme -like '*| **v3.6.0** | **2026-09-04** |*') INDEX=$($idx15 -like '*v3.6.0*公路求生*') SY=$($sy -like '*v3.6.0*') Tests=$((Get-Content $PSCommandPath -Raw -Encoding UTF8) -like '*v3.6.0 测试套件*')" })
+
+# T19b system-novel-rules #21 公路求生·克苏鲁向赛道模板（六维标准 + 崩盘点 + 校验清单 + 三重叠加 + 计数 21 类）
+$syRoad = @("21 类", "21. 公路求生", "公路求生·克苏鲁向", "载具核心机制", "公路节点与推进节奏", "资源消耗体系",
+            "SAN 值与认知污染机制", "公路诡异规则体系", "任务与奖励机制", "三重叠加", "禁止凭空修复", "3:1",
+            "移动性丧失", "补给 + 危险 + 线索", "禁止无限补给", "掉得快恢复得更快")
+$missSyRoad = @($syRoad | Where-Object { $sy -notlike "*$_*" })
+Check "T19b" "system-novel-rules #21 公路求生·克苏鲁向赛道模板（六维标准/六大崩盘点/校验清单/三重叠加/21类计数）齐全" ($missSyRoad.Count -eq 0) $(if ($missSyRoad) { "缺失: $($missSyRoad -join ',')" } else { "$(@($syRoad).Count)/$(@($syRoad).Count) 要点" })
+
+# T19c foreshadow-judgment 第六大类 F23-F27（标识/载具/道路/节点/规则 + 计数六大类27小类 + 公路题材高精度门控）
+$fjRoad = @("六大类", "27 小类", "公路场景专属伏笔", "F23", "F24", "F25", "F26", "F27",
+            "标识类", "载具类", "道路类", "节点类", "规则类", "收音机", "里程标", "循环", "命中公路求生题材")
+$missFjRoad = @($fjRoad | Where-Object { $fj16 -notlike "*$_*" })
+Check "T19c" "foreshadow-judgment 第六大类 F23-F27（标识/载具/道路/节点/规则 五小类 + 六大类27小类计数 + 公路题材高精度门控）齐全" ($missFjRoad.Count -eq 0) $(if ($missFjRoad) { "缺失: $($missFjRoad -join ',')" } else { "$(@($fjRoad).Count)/$(@($fjRoad).Count) 要点" })
+
+# T19d foreshadow-topic-templates 公路题材速查行 + §二.6 专项细则（短中长三线 + 伪规则判 C3 + SAN 接触史互证 + 双专项联动）
+$ftRoad = @("公路求生·克苏鲁向（v3.6.0）", "F23-F27", "节点遗留物", "规则伏笔", "循环类空间伏笔",
+            "伪规则", "判 C3", "接触史", "与系统文专项联动", "与 SAN 行为校验联动", "12 类题材")
+$missFtRoad = @($ftRoad | Where-Object { $ft16 -notlike "*$_*" })
+Check "T19d" "foreshadow-topic-templates 公路题材速查行 + §二.6 专项细则（F23-F27 短中长三线/伪规则判C3/SAN接触史/双专项联动/12类计数）齐全" ($missFtRoad.Count -eq 0) $(if ($missFtRoad) { "缺失: $($missFtRoad -join ',')" } else { "$(@($ftRoad).Count)/$(@($ftRoad).Count) 要点" })
+
+# T19e character-logic §1.6 公路节点节奏模型 + §2.6 SAN 值四级污染行为校验
+$clRoad = @("公路节点节奏模型", "小型节点", "中型节点", "大型节点", "3:1", "25~35 章",
+            "过密预警", "过疏预警", "失衡预警", "移动性丧失预警", "风险 + 收益 + 线索",
+            "SAN 值状态行为校验", "轻度污染", "中度污染", "重度污染", "失控同化",
+            "不判定 OOC", "诱因", "秒回满", "数值穿帮", "底色")
+$missClRoad = @($clRoad | Where-Object { $cl19 -notlike "*$_*" })
+Check "T19e" "character-logic §1.6 公路节点节奏模型（三级节点/3:1配比/四预警/三要素）+ §2.6 SAN 四级污染行为校验（分级豁免/诱因/恢复/底色/穿帮红线）齐全" ($missClRoad.Count -eq 0) $(if ($missClRoad) { "缺失: $($missClRoad -join ',')" } else { "$(@($clRoad).Count)/$(@($clRoad).Count) 要点" })
+
+# T19f SKILL.md 全链路接线（铁律13 零侵入 / 意图词典公路类触发词 / 三重叠加调度 / 21类+六大类27小类+F23-F27+§1.6+§2.6 引用 / 正文与大纲双路由）
+$skillRoad = [ordered]@{
+    "铁律13零侵入"     = ($skill -like "*公路求生·克苏鲁向题材适配零侵入*")
+    "意图词典公路类"   = ($skill -like "*公路求生·克苏鲁向类*" -and $skill -like "*公路求生*" -and $skill -like "*行车规则*" -and $skill -like "*载具求生*")
+    "元素触发词"       = ($skill -like "*SAN 值*" -and $skill -like "*收音机怪谈*" -and $skill -like "*路牌诡异*" -and $skill -like "*服务区事件*" -and $skill -like "*隧道异常*")
+    "三重叠加调度"     = ($skill -like "*三重叠加*")
+    "21类赛道引用"     = ($skill -like "*21 类赛道模板*" -or $skill -like "*21 类类型模板库*" -or $skill -like "*21类赛道*")
+    "六大类27小类引用" = ($skill -like "*六大类 27 小类*")
+    "F23-F27引用"      = ($skill -like "*F23-F27*")
+    "节奏与SAN引用"    = ($skill -like "*§1.6*" -and $skill -like "*§2.6*" -and $skill -like "*公路节点节奏*")
+    "正文大纲双路由"   = ($skill -like "*system-novel-rules #21*" -and $skill -like "*公路求生·克苏鲁向要素*")
+    "资源索引同步"     = ($skill -like "*公路场景专属类 F23-F27*" -and $skill -like "*SAN 值四级污染*")
+}
+$badSkillRoad = @($skillRoad.Keys | Where-Object { -not $skillRoad[$_] })
+Check "T19f" "SKILL.md v3.6.0 全链路接线（铁律13/意图词典公路类+元素词/三重叠加/计数引用/F23-F27/§1.6§2.6/双路由/资源索引）" ($badSkillRoad.Count -eq 0) $(if ($badSkillRoad) { "未接线: $($badSkillRoad -join ',')" } else { "$(@($skillRoad).Count)/$(@($skillRoad).Count) 接线点" })
+
+# T19g INDEX 同步登记（v3.6.0 概述 / 21类 / 六大类27小类 / F23-F27 / 12类题材 / 第21条调度条款 / §1.6§2.6 引用）
+$idxRoad = @("v3.6.0", "21 类", "六大类 27 小类", "F23-F27", "12 类题材",
+             "公路求生·克苏鲁向专项调度", "§1.6", "§2.6", "三重叠加", "移动性丧失")
+$missIdxRoad = @($idxRoad | Where-Object { $idx15 -notlike "*$_*" })
+Check "T19g" "rules-pack/INDEX v3.6.0 同步登记（概述/三包计数/F23-F27/第21条调度条款/§1.6§2.6/三重叠加/移动性丧失判罚点）齐全" ($missIdxRoad.Count -eq 0) $(if ($missIdxRoad) { "缺失: $($missIdxRoad -join ',')" } else { "$(@($idxRoad).Count)/$(@($idxRoad).Count) 要点" })
+
+# T19h genre-classifier 题材信号+映射 / review-vector-db 台账计数+6类向量 / gender-transition 交叉引用 三文件联动
+$crossRoad = [ordered]@{
+    "classifier信号行" = ($gc19 -like "*公路求生·克苏鲁向（v3.6.0）*" -and $gc19 -like "*SAN 值/理智值面板*" -and $gc19 -like "*行车规则*")
+    "classifier映射行" = ($gc19 -like "*#21 赛道模板*" -and $gc19 -like "*F23-F27*" -and $gc19 -like "*§1.6*" -and $gc19 -like "*cosmic_horror*")
+    "vector台账计数"   = ($vdb16 -like "*六大类 27 小类*" -and $vdb16 -like "*F1-F27*" -and $vdb16 -like "*公路场景专属类（F23-F27*")
+    "vector六类向量"   = ($vdb16 -like "*伏笔特征向量子集**（6 类*" -or ($vdb16 -like "*6 类*" -and $vdb16 -like "*F23-F27*"))
+    "gt交叉引用"       = ($gt15 -like "*21 类赛道模板*")
+}
+$badCrossRoad = @($crossRoad.Keys | Where-Object { -not $crossRoad[$_] })
+Check "T19h" "genre-classifier（信号行+映射行）/ review-vector-db（台账六大类27小类+6类向量子集）/ gender-transition（21类交叉引用）三文件联动" ($badCrossRoad.Count -eq 0) $(if ($badCrossRoad) { "未联动: $($badCrossRoad -join ',')" } else { "$(@($crossRoad).Count)/$(@($crossRoad).Count) 联动点" })
+
+# T19i 零侵入门控与灰度回退（§1.6/§2.6/F23-F27 适用范围门控 + SKILL/INDEX 未命中休眠输出一致 + 铁律13 模块级回退 + 只提建议）
+$gateRoad = [ordered]@{
+    "节奏门控"   = ($cl19 -like "*仅激活于公路求生*")
+    "SAN门控"    = ($cl19 -like "*仅激活于含克苏鲁*")
+    "伏笔门控"   = ($fj16 -like "*命中公路求生题材*")
+    "SKILL休眠"  = ($skill -like "*未命中时规则休眠*" -and $skill -like "*输出与 v3.5.0*完全一致*")
+    "INDEX休眠"  = ($idx15 -like "*未命中公路/克苏鲁要素时本节全部规则不激活*")
+    "模块级回退" = ($skill -like "*模块级回退：删除 system-novel-rules #21*")
+    "只提建议"   = ($skill -like "*公路题材诊断**只提建议*" -or $skill -like "*公路题材诊断*只提建议*")
+}
+$badGateRoad = @($gateRoad.Keys | Where-Object { -not $gateRoad[$_] })
+Check "T19i" "零侵入门控与灰度回退（§1.6/§2.6/F23-F27 适用范围门控 + SKILL/INDEX 未命中休眠且输出与 v3.5.0 一致 + 铁律13 模块级回退 + 只提建议）" ($badGateRoad.Count -eq 0) $(if ($badGateRoad) { "缺失: $($badGateRoad -join ',')" } else { "$(@($gateRoad).Count)/$(@($gateRoad).Count) 门控点" })
+
+# T19j README v3.6.0 登记（最新更新章节 + 版本记录 + 功能特性 21类/F23-F27/六大类27小类/SAN/节点节奏 + 测试75项+T19范围）
+$readmeRoad = @("v3.6.0", "公路求生", "21 类赛道", "F23-F27", "六大类", "27 小类",
+                "SAN", "公路节点节奏", "75 项单元+集成测试", "T19 系列")
+$missReadmeRoad = @($readmeRoad | Where-Object { $readme -notlike "*$_*" })
+Check "T19j" "README v3.6.0 公路求生·克苏鲁向适配登记（最新更新/版本记录/功能特性/测试75项+T19范围）齐全" ($missReadmeRoad.Count -eq 0) $(if ($missReadmeRoad) { "缺失: $($missReadmeRoad -join ',')" } else { "$(@($readmeRoad).Count)/$(@($readmeRoad).Count) 要点" })
 
 # ── 汇总 ──
 Write-Output ("=" * 78)

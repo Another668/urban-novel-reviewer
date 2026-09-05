@@ -23,6 +23,12 @@ venv/
 *.tmp
 *.bak
 
+# === 本地审查报告 / 临时产物 ===
+duplicate-check-report.md
+*审查报告*.html
+*冗余*.html
+*检测报告*.md
+
 # === 压缩包 / 发行产物 ===
 *.zip
 *.tar.gz
