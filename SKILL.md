@@ -1,7 +1,7 @@
 ---
 name: urban-novel-reviewer
-version: 3.8.0
-description: 网文综合审稿技能 v3.8.0（男频/女频全题材，21大类）。六大自动化审查+平台合规红线门禁+系统文/性转/伏笔/公路克苏鲁四大专项。v3.7 三级更新分级机制默认轻量模式减 60%~75% token。v3.8 代码精简优化进一步减 ~15% token。适用于审稿/校对/改文/润色/大纲把关/查AI味/OOC/人设/伏笔/文风/合规等场景。
+version: 3.9.0
+description: 网文综合审稿技能 v3.9.0（男频/女频全题材，21大类）。六大自动化审查+平台合规红线门禁+系统文/性转/伏笔/公路克苏鲁四大专项。v3.7 三级更新分级机制默认轻量模式减 60%~75% token。v3.9 轻量记忆索引体系（实体注册表/分层人物库/倒排索引/滚动摘要/题材缓存路由），超长篇审稿再省 50%+ 回溯 token。适用于审稿/校对/改文/润色/大纲把关/查AI味/OOC/人设/伏笔/文风/合规等场景。
 ---
 
 # 网文综合审稿官（Urban Novel Reviewer）
@@ -15,13 +15,17 @@ description: 网文综合审稿技能 v3.8.0（男频/女频全题材，21大类
 3. **路径基准**：所有相对路径均以 `$WORKSPACE_FOLDER`（当前项目根目录）为基准，禁止以技能自身目录为基准。
 4. **自动初始化**：触发审稿时先检测项目根目录是否存在 `.review-db`；不存在则自动创建标准目录结构，无数据时自动降级为会话内临时模式。
 
-### 项目数据库标准结构（v3.7.0 精简版）
+### 项目数据库标准结构（v3.9.0 索引增强版）
 
 ```
 $WORKSPACE_FOLDER/.review-db/
-├── meta.json              # 项目元数据：书名、题材、当前章节、模块标记（极轻量，<100token）
-├── setting.md             # 世界观 + 人物卡 + 力量体系 单文件，按段落分区
+├── meta.json              # 项目元数据：书名、题材、cached_genre 路由缓存、当前章节（极轻量，<100token）
+├── setting.md             # 核心设定：世界观 + 常驻人物卡（主角+核心配角）+ 力量体系，~300行内
 ├── project_state.json     # 全专项状态合并：system_state / gender_state / road_state / san_value
+├── entity_index.json      # 【v3.9.0】实体注册表：人物/物品/势力/地点名片，检索总入口
+├── characters/            # 【v3.9.0】分层人物库：重要配角独立建档（出场≥3章），出场才读
+├── keyword_index.json     # 【v3.9.0】倒排索引：关键词→章节列表，伏笔定位/事件回溯
+├── story_summaries.json   # 【v3.9.0】滚动摘要：最近10章详情+arc卷级摘要+全局简介（总量恒定~200行）
 ├── foreshadow/
 │   ├── index.json         # 伏笔轻量索引：FID+状态+章节，日常仅读这个
 │   ├── details/           # 单条伏笔详情，按需读写
@@ -29,10 +33,11 @@ $WORKSPACE_FOLDER/.review-db/
 └── style_fingerprint.json # 仅保留文风指纹，其余向量临时计算不持久化
 ```
 
-> **精简说明（v3.7.0）**：
-> 1. 砍掉冗余向量库：人物、剧情向量不持久化存储，每次审稿临时从正文+设定中提取；
-> 2. 专项状态合并：所有专项状态合并至 `project_state.json` 单文件，读写一次覆盖所有专项；
-> 3. 设定文档单文件化：世界观、人物、力量体系合并到 `setting.md`，按标题分区，增量更新只改对应段落。
+> **v3.9.0 索引说明**：
+> 1. **确定性查表替代语义检索**：90% 的一致性核查是"某人物/物品/伏笔在哪章、什么状态"的确定性查询，结构化索引精确命中，比向量化轻一个数量级；
+> 2. **常驻加载恒定**：meta + entity_index + foreshadow/index + setting 涉及段落 + recent 摘要 ≈ 300-500 行，不随章节数膨胀；
+> 3. **索引轻量维护**：全部增量追加（实体计数 +1 / 关键词追加 / 摘要追加），纳入三级更新分级，轻量级模式自动维护，无需用户指令；
+> 4. 旧库（v3.7/v3.8 结构）不强制迁移，审稿时惰性补建索引，下次审稿生效。
 
 ---
 
@@ -248,21 +253,32 @@ $WORKSPACE_FOLDER/.review-db/
 
 #### Step 0：启动预检（轻量，<100 token）
 
-读取 `./.review-db/meta.json`，仅获取项目基础信息与模块标记（书名、题材、当前章节、已启用模块标记）。
+读取 `./.review-db/meta.json`，仅获取项目基础信息与模块标记（书名、题材、**cached_genre 路由缓存**、当前章节、已启用模块标记）。
 
 - **无 meta 文件**：视为新项目，执行最小化初始化，创建标准目录结构（按"前置强制执行"章节定义）；
 - **有 meta 文件**：根据当前任务类型，按需加载对应模块数据（见 Step 1）。
 
 #### Step 1：模块级按需加载（仅加载当前任务涉及的数据）
 
+**常驻索引层（每次审稿必读，~200 行）**：
+
+| 数据 | 用途 |
+|------|------|
+| `./.review-db/entity_index.json` | 实体注册表：本章出场人物/物品/势力的名片与定位（常驻/建档/名片层） |
+| `./.review-db/foreshadow/index.json` | 伏笔轻量索引（全局伏笔状态速览） |
+| `./.review-db/story_summaries.json` 的 recent_chapters | 最近 10 章摘要（承接上文） |
+
+**按任务类型叠加**：
+
 | 任务类型 | 加载数据 |
 |---------|---------|
-| 基础审稿（AI味/OOC/对话/逻辑/合规） | `./.review-db/setting.md`（世界观/人物设定，仅读取涉及段落） |
+| 基础审稿（AI味/OOC/对话/逻辑/合规） | `./.review-db/setting.md` 涉及段落 + 本章出场常驻人物卡；**出场配角在建档层时按需读 `characters/Cxxx.md`（每人~40行），名片层临时提取** |
 | 系统文专项审查 | `./.review-db/project_state.json` 中 `system_state` 字段 + 对应题材模板 |
 | 性别转变专项审查 | `./.review-db/project_state.json` 中 `gender_state` 字段 + 对应模式模板 |
 | 伏笔追踪专项审查 | `./.review-db/foreshadow/index.json`（仅索引，不加载详情） |
 | 公路求生/SAN值 | `./.review-db/project_state.json` 中 `road_state` / `san_value` 字段 |
 | 文风校验 | `./.review-db/style_fingerprint.json`（仅文风指纹） |
+| 跨章核查（伏笔回收/事件冲突/剧情连贯） | `./.review-db/keyword_index.json` 定位章节 → `story_summaries.json` 对应摘要核对，**禁止直接回溯正文全章** |
 
 **未触发的模块完全不读取**，节省 token。多个专项可叠加触发，从 `project_state.json` 一次性读取对应字段。
 
@@ -272,6 +288,8 @@ $WORKSPACE_FOLDER/.review-db/
 
 - **伏笔详情**：仅读取对应 FID 的单条文件（如 `./.review-db/foreshadow/details/F001.json`），禁止批量加载全量 details/；
 - **设定细节**：仅定位对应段落读取（如 setting.md 中"力量体系"章节），不读取全文；
+- **人物卡**：常驻层查 setting.md；建档层按需读 `characters/Cxxx.md`；名片层从本章正文临时提取；
+- **历史剧情**：当前 arc 之外的历史剧情查 `story_summaries.json` 的 arc_summaries，仍不够再回溯正文；
 - **人物/剧情向量**：临时从正文和设定中提取，不持久化存储，审完即弃。
 
 ---
@@ -285,15 +303,16 @@ $WORKSPACE_FOLDER/.review-db/
 
 | 更新等级 | 触发条件 | 更新范围 | 额外 token 消耗 |
 |---------|---------|---------|--------------|
-| **轻量级（默认）** | 用户仅提交正文修改 / 普通审稿，无额外指令 | 1. 更新 `meta.json` 当前章节号<br>2. 仅更新涉及到的伏笔状态（回收/新增）<br>3. 增量追加 `style_fingerprint.json` 文风指纹<br>**绝对不碰**：章纲、卷纲、setting.md、project_state.json | 极低（<100token） |
-| **标准级** | 用户指令：`/sync-setting` / 「同步更新设定」 | 包含轻量级全部内容<br>+ 增量修改 `setting.md` 对应人物/世界观段落<br>+ 更新 `project_state.json` 对应专项字段<br>**仍不碰**：章纲、卷纲 | 中（仅修改涉及段落） |
-| **全量级** | 用户指令：`/sync-outline` / 「同步更新章纲/卷纲」 | 包含标准级全部内容<br>+ 同步重写对应章纲<br>+ 联动修正卷纲剧情节点<br>+ 全量校验全局记忆一致性 | 较高（按大纲篇幅） |
+| **轻量级（默认）** | 用户仅提交正文修改 / 普通审稿，无额外指令 | 1. 更新 `meta.json` 当前章节号<br>2. 仅更新涉及到的伏笔状态（回收/新增）<br>3. 增量追加 `style_fingerprint.json` 文风指纹<br>4. **索引维护（v3.9.0，纯增量追加）**：`entity_index.json` 出场实体计数+1/新实体追加名片行 + `keyword_index.json` 追加本章 8-12 个关键词 + `story_summaries.json` 追加本章摘要（3-5 句，溢出章粗合并进 arc）<br>**绝对不碰**：章纲、卷纲、setting.md、project_state.json、characters/ 建档 | 极低（<150token） |
+| **标准级** | 用户指令：`/sync-setting` / 「同步更新设定」 | 包含轻量级全部内容<br>+ 增量修改 `setting.md` 对应人物/世界观段落<br>+ 更新 `project_state.json` 对应专项字段<br>+ 人物卡建档（出场满 3 章的配角创建 `characters/Cxxx.md`）+ `entity_index.json` key_facts 增量更新<br>**仍不碰**：章纲、卷纲 | 中（仅修改涉及段落） |
+| **全量级** | 用户指令：`/sync-outline` / 「同步更新章纲/卷纲」 | 包含标准级全部内容<br>+ 同步重写对应章纲<br>+ 联动修正卷纲剧情节点<br>+ arc 摘要精合并重写 + `global_summary` 重写 + entity_index 全量校验（死实体归档）+ 人物晋升/降级执行<br>+ 全量校验全局记忆一致性 | 较高（按大纲篇幅） |
 
 #### 严格禁止的自动行为
 
 1. **禁止**根据正文修改自动反向推导修改章纲、卷纲，必须用户主动发指令才执行；
-2. **禁止**修改一小段正文就全量重写整个设定文档、整个状态库；
-3. **禁止**未触发对应专项时，更新该专项的记忆数据。
+2. **禁止**修改一小段正文就全量重写整个设定文档、整个状态库、整个索引文件；
+3. **禁止**未触发对应专项时，更新该专项的记忆数据；
+4. **禁止**为跨章核查直接回溯正文全章——先查 `keyword_index.json` 定位、再读 `story_summaries.json` 摘要，正文回溯仅限摘要无法回答的细节。
 
 ---
 
@@ -313,8 +332,21 @@ $WORKSPACE_FOLDER/.review-db/
    - 未触发的专项，绝对不触碰对应字段。
 4. **style_fingerprint.json（文风指纹）**：
    - 按 EWMA 指数滑动更新，仅修改量化字段值，不重写全文。
-5. **已归档数据（archived.json）**：默认不触碰，仅手动指令触发归档操作。
-6. **meta.json**：每次审稿后更新当前章节号，其余字段仅在初始化/题材重识别时更新。
+5. **entity_index.json（实体注册表，v3.9.0）**：
+   - 出场实体仅更新 `last_ch` / `appear_count` 计数字段；
+   - 新实体仅追加一行名片，key_facts 仅 /sync-setting 时更新；
+   - 禁止全量重建注册表（死实体清理仅全量级执行）。
+6. **keyword_index.json（倒排索引，v3.9.0）**：
+   - 仅追加本章关键词到既有条目的章节列表，不重建索引；
+   - 体积超限时按"单关键词保留最近 30 章、总量>500 清单次条目"规则裁剪。
+7. **story_summaries.json（滚动摘要，v3.9.0）**：
+   - 仅追加本章摘要到 recent_chapters；溢出章粗合并进 arc（拼接压缩）；
+   - arc 精合并重写、global_summary 重写仅全量级执行。
+8. **characters/（建档层人物卡，v3.9.0）**：
+   - 建档仅 /sync-setting 执行（出场满 3 章触发）；
+   - 更新仅修改涉及字段，按人物卡模板增量维护。
+9. **已归档数据（archived.json）**：默认不触碰，仅手动指令触发归档操作。
+10. **meta.json**：每次审稿后更新当前章节号，cached_genre 仅题材识别/漂移重识别时更新，其余字段仅在初始化时更新。
 
 ---
 
@@ -332,10 +364,10 @@ $WORKSPACE_FOLDER/.review-db/
    - **不存在 = 新项目**：自动创建独立库实例，从记忆文档首次灌入人物/事实/数值/伏笔，报告开头注明 `🆕 已为《书名》初始化独立审稿数据库`；
    - **存在 = 旧项目**：校验项目ID一致后打开，严禁串库；
    - 同时初始化 `style/` 文风库（按 [references/style-memory-db.md](references/style-memory-db.md)）。
-3. **建立本章索引锚点**。读取记忆文档 + 库中人物档案/facts/未闭合hooks后，按 [references/memory-index.md](references/memory-index.md) 提取与本章相关的：
-   - 出场人物的五维档案、灵魂铁则、语言指纹、情绪反应库
+3. **建立本章索引锚点**。读取记忆文档 + 常驻索引层（`entity_index.json` 实体名片 + `foreshadow/index.json` 伏笔索引 + `story_summaries.json` 最近章节摘要，v3.9.0）后，按 [references/memory-index.md](references/memory-index.md) 提取与本章相关的：
+   - 出场人物的五维档案、灵魂铁则、语言指纹、情绪反应库（**常驻层查 setting.md；建档层按需读 characters/Cxxx.md；名片层临时提取**）
    - 当前数值状态（系统点数/好感值/等级/货币等全部追踪表）
-   - 进行中任务、持有物品、已解锁技能
+   - 进行中任务、持有物品、已解锁技能（**物品/技能状态先查 entity_index.json 的 items 条目**）
    - 待回收伏笔清单、已确认事实清单（不可打破项）
    - 大纲中本章节点的目标、节奏、出场角色、情感变化
 4. **确认记忆文档更新状态**。若记忆文档进度落后于被审章节，在报告开头标注：
@@ -344,10 +376,14 @@ $WORKSPACE_FOLDER/.review-db/
 
 记忆文档与库都缺失时：以用户提供的背景材料为基准；什么都没有时，只做文字/AI味/结构/文风维度审查，跳过一致性维度并在报告中声明。
 
-### 第2步：题材智能识别与模板自动加载
+### 第2步：题材智能识别与模板自动加载（v3.9.0：缓存优先路由）
 
-按 [references/genre-classifier.md](references/genre-classifier.md) 执行：
+按 [references/genre-classifier.md](references/genre-classifier.md) 执行，**缓存优先**：
 
+0. **缓存快速路由（v3.9.0，第二次及以后审稿必走）**：读取 `meta.json` 的 `cached_genre`——
+   - **有缓存且置信度 ≥80%**：抽取被审文本 5-8 个强信号词快速校验，命中 ≥3 个 → 直接按缓存的 templates/agents 清单加载，**跳过全量打分**（省 ~150-200 token）；
+   - **无缓存 / 校验失败**：走下方完整识别流程，结果写入 `meta.json.cached_genre`；识别结果与缓存不一致时报告标注「⚠️ 题材漂移」并用新结果更新缓存；
+   - 混合题材（双主类型权重接近）不缓存，每次走完整识别。
 1. **频道判定**：男频/女频（信号表打分）；跨频道作品主流程走高得分分支，另分支加载核心专项。
 2. **题材打分**：21 个候选题型（男频：都市日常/高武/异能/商战/娱乐圈/玄幻/仙侠/悬疑/穿越/游戏/科幻/历史/恐怖；女频：现代言情/古言/BL/GL/女尊/快穿/悬疑恋爱/女频仙侠）按强/中/弱信号加权计分，定主类型 + 辅类型。
 3. **模板映射加载**：按映射表从内置 silver 模板库（`references/templates/`）Read 对应文件——1 个题材模板 + 命中专项模板 + 最多 2 个审稿 agent，总计 ≤ 5 个；混合题材叠加。
@@ -421,7 +457,7 @@ C. 体验层
 
 D. 专项层
   D1 人情世故      利益>立场>情绪>对错/社交段位/人情账本/话留余地/活人感 [规则包:character-logic§3+social-audit-checklist][调度:social-intelligence]
-  D2 连载一致性    数值穿帮/伏笔账(5状态机)/物品技能账/任务账 [向量库:values+hooks+social_ledger+relations+leverage逐项核对]
+  D2 连载一致性    数值穿帮/伏笔账(5状态机)/物品技能账/任务账 [v3.9.0:先查entity_index+keyword_index+story_summaries索引层，临时提取本章数值逐项核对，缺失时才回溯正文]
 ```
 
 **题材专项**：按第2步加载的 silver 题材模板（模板要求的必备元素缺失=问题、模板雷区命中=问题）+ 都市四类矩阵（[references/genre-matrix.md](references/genre-matrix.md)）叠加执行。
@@ -447,8 +483,14 @@ D. 专项层
    - 文风指纹按 EWMA 融合（建档期0.4/0.6，稳定期0.75/0.25），单章异常值挂起、连续3章同向才确认演变；
    - audit-log.jsonl 追加本次审稿摘要。
    - **伏笔台账回写（v3.4.0）**：与 hooks 状态机同源同步——本章新增预埋（planted）登记编号 / 分类 / 锚点 / 计划回收章；强化（reinforced）/ 半回收（half-closed）/ 回收（closed）推进既有条目状态；超期（overdue）/ 冲突（broken）挂预警标记；一次回写 `hooks.jsonl` + `.review-db/foreshadow/foreshadow_table.md` 两处，严禁只写一处造成账实分离；新埋伏笔涉及设定事实的与「新事实」一样标记 pending，**请用户确认后**转正式条目。
+   - **轻量索引维护（v3.9.0，默认轻量级自动执行，全部增量追加）**：
+     - `entity_index.json`：本章出场实体 `appear_count`+1 / `last_ch` 更新，新实体追加名片行；
+     - `keyword_index.json`：追加本章 8-12 个核心关键词（具名实体 + 事件词）到对应条目；
+     - `story_summaries.json`：追加本章摘要（3-5 句 events + chars + tags）到 recent_chapters，超过 10 条时最老一条粗合并进 arc_summaries；
+     - 索引字段规范与体积控制规则见 [references/review-vector-db.md](references/review-vector-db.md) §1.8。
 2. **记忆文档更新建议**（不擅自代写设定事实，可给更新草稿）：
    - 新角色、新数值、新物品/技能、新伏笔埋设或回收、人物关系变化；
+   - 出场满 3 章的配角提示建档（/sync-setting 时正式创建 characters/Cxxx.md）；
    - 与"已确认事实"冲突的——优先判正文BUG，建议改正文而非改记忆；作者确认是设定演进才更新。
 
 ### 第6步：输出报告

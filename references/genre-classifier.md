@@ -4,6 +4,46 @@
 
 ---
 
+## 〇、题材缓存快速路由（v3.9.0，第二次及以后审稿必走）
+
+**同一本书的题材不会每章都变。识别一次、缓存复用，跳过全量打分。**
+
+### 路由流程
+
+```text
+读取 .review-db/meta.json 的 cached_genre 字段
+  ├─ 无缓存（首次审稿）→ 走下方第一节完整识别流程 → 结果写入 meta.json.cached_genre
+  └─ 有缓存 且 confidence ≥ 80%
+       → 快速校验：抽取被审文本 5-8 个强信号词，与缓存的 main_type 强信号表比对
+           ├─ 命中 ≥3 个（或 ≥50%）→ 校验通过，直接按缓存加载模板（跳过打分）
+           └─ 命中 <3 个 → 疑似题材漂移 → 回退完整识别流程
+                ├─ 识别结果与缓存一致 → 更新 last_verified_ch，继续用缓存
+                └─ 识别结果不同 → 报告标注「⚠️ 题材漂移：缓存为X，本章识别为Y」→ 用新结果并更新缓存
+```
+
+### cached_genre 字段结构
+
+```json
+{
+  "cached_genre": {
+    "channel": "男频",
+    "main_type": "都市日常",
+    "sub_type": "商战",
+    "confidence": 92,
+    "templates": ["male/templates/genres/dushi.md", "male/templates/antagonist_design.md"],
+    "agents": ["shared/agents/review/logic_checker.md", "shared/agents/review/conflict_checker.md"],
+    "first_identified_ch": 1,
+    "last_verified_ch": 45
+  }
+}
+```
+
+**缓存写入时机**：首次完整识别后立即写入；每次快速校验通过后更新 `last_verified_ch`；漂移重识别后覆盖更新。混合题材（双主类型权重接近）不缓存 main_type，每次都走完整识别。
+
+**收益**：跳过全量信号打分与推理，每次审稿节省 ~150-200 token；首次审稿流程与原版完全一致，零学习成本。
+
+---
+
 ## 一、识别流程（三步，不得跳步）
 
 1. **频道判定**：先判男频 / 女频（决定模板库分支 male/ 还是 female/）。
