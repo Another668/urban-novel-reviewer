@@ -21,13 +21,13 @@
 
 | 项 | 内容 |
 |----|------|
-| 审稿向量库 | 🆕 新项目已初始化 `.review-db/` / ✅ 已有库（项目ID=xxx，累计N章） |
+| 审稿库 | 🆕 新项目已初始化 `.review-db/`（含 v3.9 索引）/ ✅ 已有库（项目ID=xxx，累计N章） |
 | 引用记忆文档 | 真相记忆文档.md（进度=第X章）/ 卷纲 / setting/ 关系图谱 / ... |
-| 文档时效 | ✅与被审章节同步 / ⚠️滞后（文档第X章 vs 被审第Y章，数值判断已用正文回溯+向量库） |
+| 文档时效 | ✅与被审章节同步 / ⚠️滞后（文档第X章 vs 被审第Y章，数值判断已用正文回溯+库索引） |
 | 本章大纲节点 | [节点名]：核心冲突=… / 应埋伏笔=… / 应收伏笔=… / 情感变化=… |
-| 出场人物锚点 | [角色]：本章状态… / 语言指纹… / 不可违反铁则…（来源：记忆文档/向量库人物档案） |
-| 数值前值 | [点数名]=X / [好感值]=X / 等级=第X阶（来源：values 流水） |
-| 向量库比对 | plots 事件链 N 条 / dialogues 台词 N 条 / facts N 条 / open 伏笔 N 条 / social_ledger N 条参与检索 |
+| 出场人物锚点 | [角色]：本章状态… / 语言指纹… / 不可违反铁则…（来源：setting.md 人物卡 / characters/Cxxx.md / 本章临时提取） |
+| 数值前值 | [点数名]=X / [好感值]=X / 等级=第X阶（来源：setting.md 数值段 + entity_index key_facts） |
+| 索引层比对 | entity_index 命中实体 N 个 / story_summaries 近情 N 章 / foreshadow open N 条 / 临时提取事件链·对白·社交核对 N 处 |
 | 加载规则包 | ai-flavor / dialogue-game / character-logic / template-cliche / platform-gate（按模式列） |
 | 调度外部技能 | [S1 novel-audit] [S3 对话博弈大师] [S4 人情世故] [S5 qu-ai-wei] ...（本机已装标注来源，未装标 [内置规则包]） |
 
@@ -68,7 +68,7 @@
 | 量化偏离 | 句长 X% / 对白比 X% / 短段比 X% / 成语密度 X% / OS占比 X%（✅容差内 / ⚠️超带） |
 | 最大偏离 | [指标] +X%——剧情理由（战斗/抒情/新阶段）✅记录不罚 / 无理由 🔴判漂移 |
 | 质化检查 | 叙述声音一致 / taboo 命中 0 / 与锚点样本相似度 0.XX |
-| 演变挂起 | [无 / style-evolution 第X条 pending：连续同向漂移，待确认] |
+| 演变挂起 | [无 / style_fingerprint.json evolution 第X条 pending：连续同向漂移，待确认] |
 
 ---
 
@@ -149,15 +149,16 @@
 
 ---
 
-### 📝 审后回写清单（向量库 + 记忆文档）
+### 📝 审后回写清单（库索引 + 记忆文档）
 
-**向量库自动回写**（审稿完成即追加，事实类只追加不覆盖）：
-1. chapters/plots/dialogues 本章记录 N 条；values 数值流水 N 条；hooks 状态推进 N 条
-2. 新人物建档：[名] / audit-log 已追加本次审稿摘要
+**轻量级自动回写**（审稿完成即增量追加，v3.9.0 索引维护）：
+1. meta.json 当前章节号 +1；foreshadow/index.json 状态推进 N 条
+2. entity_index 出场实体计数更新 N 个 / 新名片 N 行；keyword_index 追加关键词 N 个；story_summaries 追加本章摘要 1 条
+3. style_fingerprint.json 按 EWMA 融合更新
 
 **待作者确认后写入**（pending，不代写既定事实）：
-1. 新事实：[事实描述] → 确认后写入 facts.jsonl
-2. 成长候选：[角色] 行为「……」疑似成长弧演变 → 确认后写入人物档案
+1. 新事实：[事实描述] → 确认后随 /sync-setting 写入 setting.md 对应段落
+2. 成长候选：[角色] 行为「……」疑似成长弧演变 → 确认后写入人物档案（setting.md / characters/Cxxx.md）
 3. 文风演变：[指标] 连续漂移（第X-Y章），原因候选=…… → 确认/驳回
 4. 记忆文档同步：数值 [点数名] +X→累计X / 伏笔新埋「……」/ 关系变化 ……（建议更新真相文档第X板块）
 

@@ -12,7 +12,7 @@
 > | novel-audit 网文审计 | ai-flavor-rules（词库/25项速检）、character-logic-rules（11维判定）、scripts/text_stats.py | ✅ 规则+脚本已内置 |
 > | plot-tension-review | character-logic-rules §1.5（五维加权/Top3 格式） | ✅ 已内置 |
 > | 网文对话博弈大师 | dialogue-game-rules（5铁则/3场景/话题阶梯/Q1-Q10） | ✅ 已内置 |
-> | novel-social-intelligence | character-logic-rules §2-3、social-audit-checklist、social-scenario-rules、social_persona_card/relationship_ledger 模板、向量库社交三集合 | ✅ 规则+清单+模板已内置 |
+> | novel-social-intelligence | character-logic-rules §2-3（v3.8.0 已并入原 social-audit-checklist 15 项审计清单与 social-scenario-rules 有效规则）、social_persona_card/relationship_ledger 模板、社交指纹审稿时临时提取 | ✅ 规则+清单+模板已内置 |
 > | qu-ai-wei-main | ai-flavor-rules（51类模式精要/语体矩阵/仲裁/六法） | ✅ 已内置（精要版） |
 > | 说人话 shuorenhua | ai-flavor-rules（Tier 密度阈值/表演腔/装饰性细节/scope 纪律） | ✅ 已内置（精要版） |
 > | humanizer-zh-main | ai-flavor-rules §六（24类/删除金句/灵魂6法/50分评分思路） | ✅ 已内置（精要版） |

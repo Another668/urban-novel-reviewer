@@ -269,22 +269,22 @@ v3.7 的"临时提取"在超长篇下有致命弱点：查"某物品上次出现
 
 ## 三、三大核心审稿功能
 
-### 3.1 剧情逻辑一致性检查（plots.jsonl + facts.jsonl）
+### 3.1 剧情逻辑一致性检查（临时提取事件链 + 已确认事实）
 
-**写入**：每章审后，把本章剧情压成 1-N 个事件节点：
+**临时提取**：审稿时把本章剧情压成 1-N 个事件节点（会话内使用，不落盘）：
 `{id, chapter, type:"event", text:"谁对谁做了什么/结果如何", vec:[...], slots:{who, where, cause, result, time}, prev:["上一事件id"]}`
 
-`facts.jsonl` 存"已确认事实"：世界观规则、人物关系定局、不可打破设定（来源 `memory-doc` 权重最高）。
+已确认事实从 `setting.md` 与记忆文档提取：世界观规则、人物关系定局、不可打破设定（来源 `memory-doc` 权重最高）；跨章事件链查 `story_summaries.json` 摘要 / `keyword_index.json` 章节定位，不回溯正文全章。
 
 **审稿判定**：
-- **因果链检查**：本章事件的 `cause` 必须能在 plots 中找到前置事件或在 facts 中找到依据；找不到 → 🔴 因果断裂（上帝之手）。
-- **事实冲突检查**：本章陈述与 facts 语义通道命中且实体相同、结论相反 → 🔴 事实矛盾。引用格式：`事实库 fact-xx（出自第X章/记忆文档）记录为A，正文第Y段写为B`。
+- **因果链检查**：本章事件的 `cause` 必须能在前情摘要（story_summaries/keyword_index 定位的前置章）或已确认事实中找到依据；找不到 → 🔴 因果断裂（上帝之手）。
+- **事实冲突检查**：本章陈述与已确认事实（setting.md/记忆文档）语义命中且实体相同、结论相反 → 🔴 事实矛盾。引用格式：`setting.md/记忆文档（出自第X章）记录为A，正文第Y段写为B`。
 - **状态承接检查**：相邻章事件的 result → 下一章开局状态应承接；矛盾（上章重伤下章活蹦乱跳无交代）→ 🟡 承接断裂。
 - **时间线检查**：slots.time 串联成故事内时钟，章际/章内时序矛盾 → 🔴。
 
-### 3.2 人物设定 OOC 偏离检测（characters/ + dialogues.jsonl）
+### 3.2 人物设定 OOC 偏离检测（分层人物库 + 临时提取对白指纹）
 
-**人物档案**（首次灌库来自记忆文档，之后随审随补）每人一个 `.md`：
+**人物档案**（setting.md 主角/核心配角卡 + characters/ 建档层，见 §1.8.2；名片层人物临时提取）每人一个 `.md`：
 
 ```markdown
 # <人物名>
@@ -299,14 +299,14 @@ v3.7 的"临时提取"在超长篇下有致命弱点：查"某物品上次出现
 **OOC 判定流程**：
 1. 本章该人物的每个关键行为/台词，与档案逐项比对：
    - 违反"灵魂铁则"且无剧情铺垫 → 🔴 OOC。
-   - 语言指纹漂移（句长/口癖/用词突变）→ 取 dialogues.jsonl 中该人物近 5 条台词指纹比对，漂移分 > 0.5 → 🟡 台词不像此人。
+   - 语言指纹漂移（句长/口癖/用词突变）→ 取本章及 story_summaries 近 5 章中该人物台词的临时指纹比对，漂移分 > 0.5 → 🟡 台词不像此人。
    - 情绪反应克隆：本章反应与"情绪反应库"比对，同一情绪连续 ≥3 次使用同一反应 → 🟡 反应克隆（库自动轮换提醒可用反应）。
 2. **成长弧豁免**：档案"成长弧"中已记录的演变方向上的变化不算 OOC；本章出现可能构成新成长的行为，标记为"成长候选"，审后请用户确认是否回写。
 3. 配角行为对照 `supporting` 类事实：路人不该知道的信息（知识边界越界）→ 🟡。
 
-### 3.3 对白台词口语化验证（dialogues.jsonl）
+### 3.3 对白台词口语化验证（临时提取对白指纹，v3.7.0 起不落盘）
 
-**写入**：每章抽取每条对白（≥10 字的）为一条记录：
+**临时提取**：每章抽取每条对白（≥10 字的）为一条比对记录：
 `{id, type:"dialogue", chapter, text, vec:[...], slots:{speaker, listener, scene}, stats:{avg_len, 口语标记数, 书面标记数, 动作锚定:bool, tier:1-4, move_type, anchor_count, subtext:bool}}`
 （v3.0 扩展 stats：`tier` 话题阶位 1事实/2立场/3底线/4利益；`move_type` 攻防动作=攻击/防守/转折/试探/出价/还价/威胁/让步/成交/寒暄；博弈判定规则见 [rules-pack/dialogue-game-rules.md](rules-pack/dialogue-game-rules.md)）
 
@@ -316,26 +316,26 @@ v3.7 的"临时提取"在超长篇下有致命弱点：查"某物品上次出现
 - **书面腔检测**：单条对白命中书面标记（长定语串联、"因此/然而/不仅…而且"、四字词连用 ≥2、完整复句无断裂）且口语标记（短句、语气词、省略、倒装、插话）为 0 → 🟡 台词像念稿。
 - **千人一面检测**：同一场景两个说话人的台词指纹（vec + stats）相似度 > 0.7 → 🟡 对话 DNA 缺失（去掉名字分不清谁在说话）。
 - **动作锚定**：连续 ≥4 个对白轮次无任何动作/表情/环境锚定 → 🔴/🟡 飘对话（规则包 F1）。
-- **功能化检测**：对白 vec 与 plots 事件 vec 高度重合（台词纯在复述剧情/设定）→ 🟡 信息倾倒/科普嘴。
+- **功能化检测**：对白 vec 与本章事件链指纹高度重合（台词纯在复述剧情/设定）→ 🟡 信息倾倒/科普嘴。
 - **口语基线偏离**：某人物本条对白 stats 与其历史基线偏离 > 0.5（如平时句长 8 字突然 25 字长句）→ 标记，结合语境判定是 OOC 还是特殊情境（演讲/吵架可豁免，需场景支持）。
 - **轮次空转**（v3.0）：同场景连续 >2 轮 move_type 为寒暄/重复且无新 slots 实体 → 🟡 原地拉扯。
 - **阶梯停滞**（v3.0）：tier 同一阶停留 >2 轮且无新筹码/新信息事件 → 🟡。
-- **局势零变化**（v3.0）：对话场景结束时 plots 无对应 event、relations 槽位无更新 → 🟡 无效对话。
+- **局势零变化**（v3.0）：对话场景结束时事件链无对应 event、关系槽位无更新 → 🟡 无效对话。
 - **单方碾压**（v3.0）：对峙/辩论场景弱势方 move_type 中有效反击/转移计数 <1 → 🟡。
 - **直白情绪词**（v3.0）：正则命中 `(生气|开心|愤怒|冷笑|高兴)地?[说道吼骂]` → 🟡。
 - **长台词独白**（v3.0）：单条 >50 字且其后 1 轮内无对方反应 → 🟡。
 
 ---
 
-## 四、数值与伏笔流水
+## 四、数值与社交临时核对（v3.7.0 起不落盘，唯一持久化的状态机为伏笔索引）
 
-- **values.jsonl**：每个数值类信息一条 `{type:"value", chapter, slots:{name:"好感值/点数/等级/金额", owner, value, delta, reason}}`。审稿时按 name+owner 排序成时间线：delta 累计 ≠ 新 value → 🔴 数值穿帮；播报格式（如"【叮！】"风格）前后不一 → 🟢。
-- **hooks.jsonl**：伏笔状态机 `{id, type:"hook", chapter_buried, chapter_due, status:"open/half/closed", text, vec, slots:{chekhov:"物品/预言/人物"}}`。超过 `chapter_due` 仍 open → 🟡 伏笔超期；closed 伏笔与埋设内容矛盾 → 🔴；正文回收了但库中无埋设记录 → 提示补登记。**v3.4.0 起与 `.review-db/foreshadow/foreshadow_table.md` 标准化台账同源同步**（映射规范见 §六），一次回写两处，严禁账实分离。
-- **social_ledger.jsonl**（v3.0）：人情账 `{type:"favor", chapter, slots:{creditor, debtor, content, level:"轻微/一般/重大/救命", repaid:false, repaid_chapter}}`。审稿核对：人情轻重与事件重量不匹配（救命级换小忙）→ 🔴 人情失重；单向受惠无回请且无 repaid 记录 → 🟡 关系失衡；无缘无故的善意/恶意（ ledger 与 plots 均无成因）→ 🟡。
-- **relations.jsonl**（v3.0）：二人关系 `{type:"relation", chapter, slots:{pair:"A-B", status, affinity:0-100, suspicion:0-100, summary}}`。每章按回写规则更新；好感度双轴校验 CP 行为（按低的一方算，好感不足写亲密 → 🔴/🟡）；猜忌度骤降无事件支撑 → 🟡。
-- **leverage.jsonl**（v3.0）：把柄筹码 `{type:"leverage", chapter, slots:{holder, target, content, kind:"把柄/筹码", revealed:false}}`。谈判/背刺场景审查：翻脸前无 leverage 埋设记录且无试探情节 → 🔴 突然翻脸；谈判筹码无来源 → 🟡。
+- **数值流水（临时提取）**：审稿时从本章正文提取数值类信息 `{chapter, slots:{name:"好感值/点数/等级/金额", owner, value, delta, reason}}`，与 `entity_index.json` key_facts、setting.md 数值段核对：delta 累计 ≠ 新 value → 🔴 数值穿帮；播报格式（如"【叮！】"风格）前后不一 → 🟢。
+- **伏笔状态机（持久化）**：由 `foreshadow/index.json` + `details/` 唯一承载（见 §六），轻量级模式仅推进 index.json 对应 FID 状态字段；超过 `chapter_due` 仍 planted/reinforced → 🟡 伏笔超期；closed 伏笔与埋设内容矛盾 → 🔴；正文回收了但索引无埋设记录 → 提示补登记。
+- **人情账（临时提取）**：从本章正文提取社交事件 `{chapter, slots:{creditor, debtor, content, level:"轻微/一般/重大/救命", repaid:false, repaid_chapter}}`。审稿核对：人情轻重与事件重量不匹配（救命级换小忙）→ 🔴 人情失重；单向受惠无回请且无 repaid 迹象 → 🟡 关系失衡；无缘无故的善意/恶意（人情账与事件链均无成因）→ 🟡。
+- **二人关系（临时提取）**：`{chapter, slots:{pair:"A-B", status, affinity:0-100, suspicion:0-100, summary}}`；好感度双轴校验 CP 行为（按低的一方算，好感不足写亲密 → 🔴/🟡）；猜忌度骤降无事件支撑 → 🟡。
+- **把柄筹码（临时提取）**：`{chapter, slots:{holder, target, content, kind:"把柄/筹码", revealed:false}}`。谈判/背刺场景审查：翻脸前无 leverage 埋设记录且无试探情节 → 🔴 突然翻脸；谈判筹码无来源 → 🟡。
 
-**社交数值建议幅度**（回写参考）：重大人情 affinity +15~25、一般 +5~10；猜忌事件 suspicion +10~20；撕破脸 affinity 归零并标记 status。
+**社交数值建议幅度**（/sync-setting 回写 setting.md 时参考）：重大人情 affinity +15~25、一般 +5~10；猜忌事件 suspicion +10~20；撕破脸 affinity 归零并标记 status。
 
 ---
 
